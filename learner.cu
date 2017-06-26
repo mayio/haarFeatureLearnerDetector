@@ -370,6 +370,7 @@ int main(void)
 
 #ifdef DEBUG
       std::cout << "Debug: Stage:" << stageIdx << std::endl;
+
 #endif
 
       uint32_t roundIdx = 0;

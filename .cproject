@@ -156,7 +156,7 @@
 								<option defaultValue="nvcc.compiler.optimization.level.most" id="nvcc.compiler.optimization.level.1378542578" name="Optimization Level" superClass="nvcc.compiler.optimization.level" valueType="enumerated"/>
 								<option id="nvcc.compiler.pic.1773440173" name="Position Independent Code (-fPIC)" superClass="nvcc.compiler.pic"/>
 								<option id="nvcc.compiler.option.lineinfo.1032649559" name="Generate line-number information for device code (-lineinfo)" superClass="nvcc.compiler.option.lineinfo" value="false" valueType="boolean"/>
-								<option id="nvcc.compiler.include.paths.115054723" name="Include paths (-I)" superClass="nvcc.compiler.include.paths" valueType="includePath"/>
+								<option id="nvcc.compiler.include.paths.115054723" name="Include paths (-I)" superClass="nvcc.compiler.include.paths"/>
 								<inputType id="nvcc.compiler.input.cu.2020336452" superClass="nvcc.compiler.input.cu"/>
 								<inputType id="nvcc.compiler.input.cpp.1265675324" superClass="nvcc.compiler.input.cpp"/>
 								<inputType id="nvcc.compiler.input.c.1540574502" superClass="nvcc.compiler.input.c"/>
@@ -221,7 +221,7 @@
 								<option defaultValue="nvcc.compiler.optimization.level.most" id="nvcc.compiler.optimization.level.122499056" name="Optimization Level" superClass="nvcc.compiler.optimization.level" value="nvcc.compiler.optimization.level.none" valueType="enumerated"/>
 								<option id="nvcc.compiler.pic.1795221078" name="Position Independent Code (-fPIC)" superClass="nvcc.compiler.pic"/>
 								<option id="nvcc.compiler.option.lineinfo.1562723084" name="Generate line-number information for device code (-lineinfo)" superClass="nvcc.compiler.option.lineinfo" value="true" valueType="boolean"/>
-								<option id="nvcc.compiler.include.paths.1917404906" name="Include paths (-I)" superClass="nvcc.compiler.include.paths" valueType="includePath"/>
+								<option id="nvcc.compiler.include.paths.1917404906" name="Include paths (-I)" superClass="nvcc.compiler.include.paths"/>
 								<inputType id="nvcc.compiler.input.cu.1817587443" superClass="nvcc.compiler.input.cu"/>
 								<inputType id="nvcc.compiler.input.cpp.1506653913" superClass="nvcc.compiler.input.cpp"/>
 								<inputType id="nvcc.compiler.input.c.1446896734" superClass="nvcc.compiler.input.c"/>
@@ -269,6 +269,7 @@
 		<configuration configurationName="Release Learner">
 			<resource resourceType="PROJECT" workspacePath="/Detector"/>
 		</configuration>
+		<configuration configurationName="DebugLearner"/>
 		<configuration configurationName="ReleaseLearner">
 			<resource resourceType="PROJECT" workspacePath="/Detector"/>
 		</configuration>

@@ -26,6 +26,14 @@ __forceinline__ __device__ void Classifier::getFeatureValueTex(
       const uint32_t featureWidth, const uint32_t featureHeight,
       int32_t & value)
 {
+   assert(false);
+
+   // FIXME:
+   // this is not right
+   // see getFeatureValue
+   // the rectElementWidth and rectElementHeight have to be reduced by 1
+   //
+
    value = 0;
    uint32_t xi = x;
 
@@ -543,7 +551,7 @@ __global__ void detectStrongClassifierGpu(
    const uint32_t y = pixelIdx / imageWidth;
    const uint32_t x = pixelIdx - y * imageWidth;
 
-   uint32_t * integralImageData = (uint32_t *)(integralImage.data);
+   const int32_t * integralImageData = (int32_t *)(integralImage.data);
 
    double hSum = 0.0;
 
@@ -611,13 +619,16 @@ __global__ void detectStrongClassifierGpu(
 
          if (!outOfRange)
          {
-            int32_t * integralImagePtrY = (int32_t *)((uint8_t *)(integralImageData) + classifierUpperPoint * integralImage.step);
+            // fixme remove this
+            // int32_t * integralImagePtrY = (int32_t *)((uint8_t *)(integralImageData) + classifierUpperPoint * integralImage.step);
 
             Classifier::getFeatureValue(
+                  integralImageData,
                   singleClassifier,
-                  integralImagePtrY,
-                  integralImage.step,
+                  // FIXME check this
+                  integralImage.step / sizeof(uint32_t),
                   classifierLeftPoint,
+                  classifierUpperPoint,
                   rectWidth, rectHeight,
                   featureWidth, featureHeight,
                   featureValue);

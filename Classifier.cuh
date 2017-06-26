@@ -148,15 +148,18 @@ public:
          int32_t & value)
    {
       value = 0;
+      const uint32_t rectElementWidthErode = rectElementWidth - 1;
+      const uint32_t rectElementHeightErode = rectElementHeight -1;
+
       uint32_t xi = x;
 
       const int32_t * integralImageLine  = integralImage + y * lineStep;
-      const int32_t * integralImageLine2 = integralImageLine + rectElementHeight * lineStep;
+      const int32_t * integralImageLine2 = integralImageLine + rectElementHeightErode * lineStep;
 
-      int32_t i1 = integralImageLine[x];                     // integralImage(yi, xi);
-      int32_t i2 = integralImageLine[x + rectElementWidth];  // integralImage(yi, xi + rectElementWidth);
-      int32_t i3 = integralImageLine2[x];                    //integralImage(yi + rectElementHeight, xi);
-      int32_t i4 = integralImageLine2[x + rectElementWidth]; //integralImage(yi + rectElementHeight, xi + rectElementWidth);
+      int32_t i1 = integralImageLine[x];                          // integralImage(yi, xi);
+      int32_t i2 = integralImageLine[x + rectElementWidthErode];  // integralImage(yi, xi + rectElementWidth);
+      int32_t i3 = integralImageLine2[x];                         //integralImage(yi + rectElementHeight, xi);
+      int32_t i4 = integralImageLine2[x + rectElementWidthErode]; //integralImage(yi + rectElementHeight, xi + rectElementWidth);
 
       int32_t k3 = i3;
       int32_t k4 = i4;
@@ -174,8 +177,8 @@ public:
                i1 = i2;
                i3 = i4;
 
-               xi += rectElementWidth;
-               const uint32_t xi2 = xi + rectElementWidth;
+               xi += rectElementWidthErode;
+               const uint32_t xi2 = xi + rectElementWidthErode;
                i2 = integralImageLine[xi2];
                i4 = integralImageLine2[xi2];
             }
@@ -185,11 +188,11 @@ public:
          {
             xi = x;
             integralImageLine = integralImageLine2;
-            integralImageLine2 = integralImageLine2 + rectElementHeight * lineStep;
+            integralImageLine2 = integralImageLine2 + rectElementHeightErode * lineStep;
             i1 = k3;
             i2 = k4;
             i3 = integralImageLine2[xi];
-            i4 = integralImageLine2[xi + rectElementWidth];
+            i4 = integralImageLine2[xi + rectElementWidthErode];
 
             k3 = i3;
             k4 = i4;

@@ -58,6 +58,10 @@ __forceinline__ __device__ bool getFeatureValues(
          &singleClassifier, rectWidth, rectHeight);
    assert(singleClassifier);
 
+   // rect width and height must be at least 2!
+   assert(rectWidth > 1);
+   assert(rectHeight > 1);
+
    const uint32_t classifierRightPoint = x + rectWidth * classifierWidth;
    const uint32_t classifierBottomPoint = y + rectHeight * classifierHeight;
    const bool outOfRange =
@@ -388,9 +392,6 @@ __global__ void getBestClassifier(uint32_t countImages,
       for (uint32_t classifierIdx = 0; classifierIdx < classifierCount;
             ++classifierIdx)
       {
-         // FIXME remove this
-         // featureValues.reset();
-
          double error;
          int32_t tmpThreshold;
          int32_t tmpPolarity;

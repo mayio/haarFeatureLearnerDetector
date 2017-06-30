@@ -381,6 +381,12 @@ void Image::normalizeImage()
 
 void Image::displayClassificationResult(const std::vector<Classifier::ClassificationResult> & classificationResults)
 {
+   // text settings
+   int fontFace = cv::FONT_HERSHEY_SIMPLEX;
+   double fontScale = 0.4;
+   int thickness = 1;
+
+   // image and
    cv::Mat resultImage;// = mImage.clone();
    cv::cvtColor(mImage, resultImage, CV_GRAY2RGB);
 
@@ -397,6 +403,17 @@ void Image::displayClassificationResult(const std::vector<Classifier::Classifica
       cv::Scalar color(0,255, 255);
 
       cv::rectangle(resultImage, topLeft, bottomRight, color);
+
+      // then put the text itself
+      std::stringstream textStream;
+      textStream << "x:" << (*resultIter).x << " y:" << (*resultIter).y;
+/*
+      int baseline=0;
+      cv::Size textSize = cv::getTextSize(textStream.str(), fontFace,
+                                  fontScale, thickness, &baseline);
+*/
+      cv::putText(resultImage, textStream.str(), topLeft, fontFace, fontScale,
+            color, thickness, 8);
    }
 
 

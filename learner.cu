@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
 #include "Learner.cuh"
 #include "Classifier.cuh"
 #include "FeatureTypes.cuh"
@@ -26,7 +25,6 @@
 
 #include "utilities.cuh"
 #include "defines.cuh"
-
 
 void defineFeature(std::vector<FeatureType> & features)
 {
@@ -119,8 +117,10 @@ int main(void)
    //const std::string pathNegativeImages = "/mnt/project-disk/src/ObjectRecognition/data/facesTraining/negatives-small_subset/*.png";
 
    // cars
-   const std::string pathPositiveImages = "/mnt/project-disk/src/ObjectRecognition/data/cars/TheKITTIVision/training/image_back_inline/*.png";
-   const std::string pathNegativeImages = "/mnt/project-disk/src/ObjectRecognition/data/cars/negatives-64x64-norm/*.png";
+   const std::string pathPositiveImages =
+         "/mnt/project-disk/src/ObjectRecognition/data/cars/TheKITTIVision/training/image_back_inline/*.png";
+   const std::string pathNegativeImages =
+         "/mnt/project-disk/src/ObjectRecognition/data/cars/negatives-64x64-norm/*.png";
 
    size_t mem_tot_0 = 0;
    size_t mem_free_0 = 0;
@@ -140,9 +140,9 @@ int main(void)
    std::vector<std::string> fileNamesPos;
    std::vector<std::string> fileNamesNeg;
    std::vector<std::string> fileNames;
-   std::vector<cv::gpu::PtrStepSz<uchar> >   imagePtrsVector;
+   std::vector<cv::gpu::PtrStepSz<uchar> > imagePtrsVector;
 
-   cv::gpu::PtrStepSz<uchar>   * gpuImagesPtr;
+   cv::gpu::PtrStepSz<uchar> * gpuImagesPtr;
 
    // load positive and negative images
    cv::glob(pathPositiveImages, fileNamesPos, true);
@@ -161,19 +161,18 @@ int main(void)
    assert(countImages > 0);
 
    uchar * imagesMem = NULL;
-   imagesMem = new uchar[countImages * sizeof(uchar) * imageHeight * imageWidth];
+   imagesMem =
+         new uchar[countImages * sizeof(uchar) * imageHeight * imageWidth];
 
    uchar * imagesGpuMem = NULL;
    CUDA_CHECK_RETURN(
-         cudaMalloc(
-               (void**)&imagesGpuMem,
+         cudaMalloc((void** )&imagesGpuMem,
                countImages * sizeof(uchar) * imageHeight * imageWidth));
 
    int32_t * integralImagesGpuMem = NULL;
 
    CUDA_CHECK_RETURN(
-         cudaMalloc(
-               (void**)&integralImagesGpuMem,
+         cudaMalloc((void** )&integralImagesGpuMem,
                countImages * sizeof(int32_t) * imageHeight * imageWidth));
 
    // pointer to integral images (index)
@@ -196,7 +195,8 @@ int main(void)
       cv::Mat image(imageHeight, imageWidth, CV_8U, imagePtr);
       cv::gpu::GpuMat gpuImage(imageHeight, imageWidth, CV_8U, imageGpuPtr);
 
-      int32_t * integralImageGpuPtr = &integralImagesGpuMem[imageHeight * imageWidth * i];
+      int32_t * integralImageGpuPtr = &integralImagesGpuMem[imageHeight
+            * imageWidth * i];
 
       cv::gpu::GpuMat gpuIntegralImage(imageHeight, imageWidth, CV_32S,
             integralImageGpuPtr);
@@ -235,19 +235,17 @@ int main(void)
    std::cout << "Debug: Count negative images:" << fileNamesNeg.size()
          << std::endl;
 
-   std::cout << "Debug: Ratio X:" << ratioX << " Y:" << ratioY
-         << std::endl;
+   std::cout << "Debug: Ratio X:" << ratioX << " Y:" << ratioY << std::endl;
 #endif
 
-   CUDA_CHECK_RETURN(cudaMalloc(
-         (void**)&gpuImagesPtr,
-         countImages * sizeof(cv::gpu::PtrStepSz<uchar>)));
+   CUDA_CHECK_RETURN(
+         cudaMalloc((void** )&gpuImagesPtr,
+               countImages * sizeof(cv::gpu::PtrStepSz<uchar>)));
 
-   CUDA_CHECK_RETURN(cudaMemcpy(
-         gpuImagesPtr,
-         &imagePtrsVector[0],
-         countImages * sizeof(cv::gpu::PtrStepSz<uchar>),
-         cudaMemcpyHostToDevice));
+   CUDA_CHECK_RETURN(
+         cudaMemcpy(gpuImagesPtr, &imagePtrsVector[0],
+               countImages * sizeof(cv::gpu::PtrStepSz<uchar>),
+               cudaMemcpyHostToDevice));
 
 #ifdef DEBUG
    cudaMemGetInfo(&mem_free_0, &mem_tot_0);
@@ -278,15 +276,13 @@ int main(void)
    // copy the integral images indexes to gpu
    uint32_t * availableIntegralImagesGpu = NULL;
 
-   CUDA_CHECK_RETURN(cudaMalloc(
-         (void**)&availableIntegralImagesGpu,
-         countImages * sizeof(uint32_t)));
+   CUDA_CHECK_RETURN(
+         cudaMalloc((void** )&availableIntegralImagesGpu,
+               countImages * sizeof(uint32_t)));
 
-   CUDA_CHECK_RETURN(cudaMemcpy(
-         availableIntegralImagesGpu,
-         &availableIntegralImages[0],
-         countImages * sizeof(uint32_t),
-         cudaMemcpyHostToDevice));
+   CUDA_CHECK_RETURN(
+         cudaMemcpy(availableIntegralImagesGpu, &availableIntegralImages[0],
+               countImages * sizeof(uint32_t), cudaMemcpyHostToDevice));
 
 #ifdef DEBUG
    cudaMemGetInfo(&mem_free_0, &mem_tot_0);
@@ -295,21 +291,20 @@ int main(void)
          << mem_tot_0 << std::endl;
 #endif
 
-/*
-   cv::Mat displayImage;
-   gpuIntegralImages[1].download(displayImage);
-   Image::displayImageFalseColor(displayImage);
-   return 0;
-*/
-
+   /*
+    cv::Mat displayImage;
+    gpuIntegralImages[1].download(displayImage);
+    Image::displayImageFalseColor(displayImage);
+    return 0;
+    */
 
    // init weight for all images
    double * imageWeightsPtr = new double[countImages];
    double * gpuImageWeightsPtr = NULL;
 
-   CUDA_CHECK_RETURN(cudaMalloc(
-         (void ** )&gpuImageWeightsPtr,
-         countImages * sizeof(cv::gpu::PtrStepSz<uchar>)));
+   CUDA_CHECK_RETURN(
+         cudaMalloc((void ** )&gpuImageWeightsPtr,
+               countImages * sizeof(cv::gpu::PtrStepSz<uchar>)));
 
    double initWeight = 1.0 / countImages;
 
@@ -318,7 +313,8 @@ int main(void)
       imageWeightsPtr[i] = initWeight;
    }
 
-   cudaMemcpy(gpuImageWeightsPtr, imageWeightsPtr, countImages * sizeof(double), cudaMemcpyHostToDevice);
+   cudaMemcpy(gpuImageWeightsPtr, imageWeightsPtr, countImages * sizeof(double),
+         cudaMemcpyHostToDevice);
 
    const uint32_t pixelCount = (imageWidth / ratioX) * (imageHeight / ratioY);
    //const uint32_t pixelCount = 5000;
@@ -331,7 +327,8 @@ int main(void)
    // generate all classifier in all scales
    FeatureTypes featureTypes;
    defineFeature(featureTypes);
-   featureTypes.generateClassifier(classifierScale, imageWidth, imageHeight, true);
+   featureTypes.generateClassifier(classifierScale, imageWidth, imageHeight,
+         true);
 
    // reserve space for the result
    Classifier::SelectionResult * results = NULL;
@@ -385,36 +382,33 @@ int main(void)
       std::cout << std::endl;
 #endif
 
-      while(Fcurr > (f * Fprev))
+      while (Fcurr > (f * Fprev))
       {
          roundIdx++;
          uint32_t newClassifierCount = 0;
 
-         adaBoost(
-               roundIdx,
-               countImages,
-               countPosImages,
-               pixelCount,
-               ratioX, ratioY,
-               imageWidth, imageHeight,
-               featureTypes,
-               integralImagesGpuMem,
-               availableIntegralImagesGpu,
-               imageWeightsPtr, gpuImageWeightsPtr,
-               start, stop,
-               classifierStage.stagedClassifier,
-               results, gpuResults,
-               newClassifierCount,
-               outputfile);
+         adaBoost(roundIdx, countImages, countPosImages, pixelCount, ratioX,
+               ratioY, imageWidth, imageHeight, featureTypes,
+               integralImagesGpuMem, availableIntegralImagesGpu,
+               imageWeightsPtr, gpuImageWeightsPtr, start, stop,
+               classifierStage.stagedClassifier, results, gpuResults,
+               newClassifierCount, outputfile);
 
-         for (uint32_t i = classifierStage.stagedClassifier.size() - newClassifierCount; i < classifierStage.stagedClassifier.size(); ++i)
+         for (uint32_t i = classifierStage.stagedClassifier.size()
+               - newClassifierCount;
+               i < classifierStage.stagedClassifier.size(); ++i)
          {
-            updateImageWeights(countImages, countPosImages,
-                  integralImagesGpuMem, availableIntegralImagesGpu, imageWidth, imageHeight,
-                  featureTypes, classifierStage.stagedClassifier[i], imageWeightsPtr, classifierStage.betas,
-                  featureValuesPtrs);
+            if (classifierStage.stagedClassifier[i].error != 0.0)
+            {
+               updateImageWeights(countImages, countPosImages,
+                     integralImagesGpuMem, availableIntegralImagesGpu, imageWidth,
+                     imageHeight, featureTypes,
+                     classifierStage.stagedClassifier[i], imageWeightsPtr,
+                     classifierStage.betas, featureValuesPtrs);
 
-            cudaMemcpy(gpuImageWeightsPtr, imageWeightsPtr, countImages * sizeof(double), cudaMemcpyHostToDevice);
+               cudaMemcpy(gpuImageWeightsPtr, imageWeightsPtr,
+                     countImages * sizeof(double), cudaMemcpyHostToDevice);
+            }
          }
 
          if (newClassifierCount == 0)
@@ -425,13 +419,9 @@ int main(void)
             break;
          }
 
-         evaluateClassifier(
-               countImages, countPosImages,
-               classifierStage.stagedClassifier,
-               featureValuesPtrs,
-               classifierStage.betas,
-               d, Dprev, Fcurr, Dcurr,
-               falsePositiveIdx,
+         evaluateClassifier(countImages, countPosImages,
+               classifierStage.stagedClassifier, featureValuesPtrs,
+               classifierStage.betas, d, Dprev, Fcurr, Dcurr, falsePositiveIdx,
                classifierStage.stageThreshold);
       }
 
@@ -446,12 +436,12 @@ int main(void)
       classifierStages.push_back(classifierStage);
 
       // free feature values
-      for (std::vector<GetFeatureValueResult *>::const_iterator featureValuesPtrIter = featureValuesPtrs.begin();
-           featureValuesPtrIter != featureValuesPtrs.end();
-           ++featureValuesPtrIter)
+      for (std::vector<GetFeatureValueResult *>::const_iterator featureValuesPtrIter =
+            featureValuesPtrs.begin();
+            featureValuesPtrIter != featureValuesPtrs.end();
+            ++featureValuesPtrIter)
       {
-         CUDA_CHECK_RETURN(
-               cudaFreeHost(*featureValuesPtrIter));
+         CUDA_CHECK_RETURN(cudaFreeHost(*featureValuesPtrIter));
       }
 
       featureValuesPtrs.clear();
@@ -459,34 +449,39 @@ int main(void)
       if (falsePositiveIdx.size() == 0)
       {
 #ifdef DEBUG
-         std::cout << "Debug: No false positive images are left. Finishing!"<< std::endl;
+         std::cout << "Debug: No false positive images are left. Finishing!"
+               << std::endl;
 #endif
          break;
       }
 
       // create a new set of positive images and false positive images
-      std::vector<cv::gpu::PtrStepSz<int32_t> > integralImagePtrsVectorTmp;
-      integralImagePtrsVectorTmp.reserve(countImages);
-
+      std::vector<uint32_t> availableIntegralImagesOld;
+      std::swap(availableIntegralImages, availableIntegralImagesOld);
       availableIntegralImages.clear();
+      availableIntegralImages.reserve(countPosImages + falsePositiveIdx.size());
 
       for (uint32_t i = 0; i < countPosImages; ++i)
       {
          availableIntegralImages.push_back(i);
       }
 
-      for (uint32_t falsePositiveIdxIter = 0; falsePositiveIdxIter < falsePositiveIdx.size(); ++falsePositiveIdxIter)
+      for (uint32_t falsePositiveIdxIter = 0;
+            falsePositiveIdxIter < falsePositiveIdx.size();
+            ++falsePositiveIdxIter)
       {
-         availableIntegralImages.push_back(falsePositiveIdx[falsePositiveIdxIter]);
+         availableIntegralImages.push_back(
+               availableIntegralImagesOld[
+                                          falsePositiveIdx[falsePositiveIdxIter]
+                                          ]
+               );
       }
 
       countImages = availableIntegralImages.size();
 
-      CUDA_CHECK_RETURN(cudaMemcpy(
-            availableIntegralImagesGpu,
-            &availableIntegralImages[0],
-            countImages * sizeof(int32_t),
-            cudaMemcpyHostToDevice));
+      CUDA_CHECK_RETURN(
+            cudaMemcpy(availableIntegralImagesGpu, &availableIntegralImages[0],
+                  countImages * sizeof(int32_t), cudaMemcpyHostToDevice));
 
 #ifdef DEBUG
       std::cout << "Debug: Images left:" << countImages << std::endl;
@@ -508,18 +503,19 @@ int main(void)
    std::stringstream prettyClassifier;
    prettyClassifier << "[";
 
-   for (uint32_t classifierStageIdx = 0; classifierStageIdx < classifierStages.size(); ++classifierStageIdx)
+   for (uint32_t classifierStageIdx = 0;
+         classifierStageIdx < classifierStages.size(); ++classifierStageIdx)
    {
-      const Classifier::Stage & classifierStage = classifierStages[classifierStageIdx];
+      const Classifier::Stage & classifierStage =
+            classifierStages[classifierStageIdx];
 
       prettyClassifier << "[[";
 
       for (uint32_t i = 0; i < classifierStage.stagedClassifier.size(); ++i)
       {
-         prettyClassifier <<
-               Classifier::dumpSelectedClassifier(
-                     classifierStage.stagedClassifier[i],
-                     featureTypes);
+         prettyClassifier
+               << Classifier::dumpSelectedClassifier(
+                     classifierStage.stagedClassifier[i], featureTypes);
 
          if ((i + 1) < classifierStage.stagedClassifier.size())
          {

@@ -49,6 +49,7 @@ int main(void)
    */
 
 
+   /* faces
    std::string strongClassifierStr = std::string() +
          "[[[[[[[49,22,1]],[[49,22,-1]]],18,0,0.0332471,-90686,1],[[[[12,36,1],[12,36,-1]]],0,12,0.0991827,-9593,1],[[[[16,6,1],[16,6,-1]]],57,84,0.148353,2177,-1]]," +
          "[0.0343905,0.110103,0.174196]," +
@@ -60,8 +61,29 @@ int main(void)
          "[0.0181903,0.0761542,0.210242,0.213206,0.271327,0.283774,0.265606,0.282749,0.267108,0.286566,0.299632]," +
          "10.5988]" +
          "]";
+   */
 
-   const std::string imageFileName = "/mnt/project-disk/src/ObjectRecognition/data/facesTraining/tutorial-haartraining/data/CMU-MIT_Face_Test_Set/newtest/ew-courtney-david.png";
+   const std::string strongClassifierStr = std::string() +
+         "[[[[[[[4,18,1],[4,18,-1]]],56,40,0.112921,-1791,1],[[[[35,14,1]],[[35,14,-1]]],22,25,0.160909,15873,-1],[[[[7,11,1]],[[7,11,-1]]],15,2,0.229393,1072,-1],[[[[22,7,1]],[[22,7,-1]]],0,50,0.241598,-4134,1],[[[[11,28,1],[11,28,-1],[11,28,1]]],13,36,0.22637,39361,1]]," +
+         "[0.127295,0.191766,0.297678,0.318562,0.292607]," +
+         "2.37286]," +
+         "[[[[[[11,28,1],[11,28,-1],[11,28,1]]],3,35,0.0920388,44285,1],[[[[35,4,1]],[[35,4,-1]]],18,56,0.0979379,-6207,1],[[[[4,14,1],[4,14,-1]]],56,42,0.225626,-634,1],[[[[3,14,1],[3,14,-1]]],0,44,0.271026,303,-1],[[[[28,9,1]],[[28,9,-1]]],29,38,0.302488,5531,-1],[[[[28,9,1]],[[28,9,-1]]],32,46,0.290169,-8578,1],[[[[2,28,1],[2,28,-1],[2,28,1]]],25,5,0.261227,3083,-1],[[[[11,14,1],[11,14,-1]]],1,9,0.262591,2186,-1],[[[[35,9,1]],[[35,9,-1]]],12,8,0.291488,4355,-1],[[[[35,11,1]],[[35,11,-1]]],19,42,0.330793,-22381,1],[[[[2,7,1],[2,7,-1]]],22,57,0.284522,-26,-1],[[[[35,11,1]],[[35,11,-1]]],12,41,0.265543,14866,-1],[[[[2,35,1],[2,35,-1],[2,35,1]]],40,1,0.305008,5727,1],[[[[7,23,1]],[[7,23,-1]]],11,7,0.312512,6835,-1],[[[[11,6,1],[11,6,-1]]],11,14,0.337382,-723,1],[[[[2,7,1],[2,7,-1]]],57,57,0.341284,12,1],[[[[35,6,1]],[[35,6,-1]]],7,17,0.322762,-4981,1]]," +
+         "[0.101369,0.108571,0.291366,0.37179,0.433667,0.408786,0.353595,0.356099,0.411409,0.494305,0.397668,0.361551,0.438865,0.454571,0.509164,0.518104,0.476586]," +
+         "8.47287]," +
+         "[[[[[[4,9,1],[4,9,-1]]],18,55,0.0164101,719,1],[[[[6,14,1],[6,14,-1]]],52,43,0.180468,-4192,1],[[[[2,7,1],[2,7,-1],[2,7,1]]],53,48,0.276319,329,1],[[[[4,18,1],[4,18,-1]]],0,44,0.289576,456,-1],[[[[4,7,1],[4,7,-1]]],3,17,0.302191,249,-1],[[[[4,7,1],[4,7,-1]]],17,57,0.271353,-158,-1],[[[[22,3,1]],[[22,3,-1]]],18,5,0.287661,-417,1],[[[[11,3,1]],[[11,3,-1]]],0,43,0.316637,84,-1],[[[[14,11,1]],[[14,11,-1]]],36,23,0.312994,1471,-1],[[[[3,9,1],[3,9,-1]]],25,55,0.32938,-101,-1],[[[[35,6,1]],[[35,6,-1]]],15,3,0.290933,4828,-1],[[[[4,18,1],[4,18,-1]]],56,46,0.31619,-124,1],[[[[9,7,1]],[[9,7,-1]]],42,48,0.32906,-2360,1],[[[[4,9,1],[4,9,-1]]],22,49,0.326384,200,1],[[[[4,7,1],[4,7,-1]]],53,16,0.320589,486,-1],[[[[4,22,1],[4,22,-1]]],33,15,0.307745,-53,-1],[[[[7,7,1]],[[7,7,-1]]],20,10,0.339455,549,-1],[[[[2,6,1],[2,6,-1]]],22,42,0.335931,-11,-1],[[[[28,4,1]],[[28,4,-1]]],4,44,0.318995,561,-1],[[[[11,14,1],[11,14,-1]]],11,28,0.328759,-1130,1]]," +
+         "[0.0166839,0.220208,0.381824,0.40761,0.433058,0.372407,0.403826,0.46335,0.455591,0.491158,0.410305,0.462395,0.490447,0.484526,0.471862,0.444554,0.513902,0.505867,0.468418,0.489778]," +
+         "11.1484]," +
+         "[[[[[[18,3,1]],[[18,3,-1]]],0,12,0.00265346,2456,1],[[[[7,3,1]],[[7,3,-1]]],6,20,0.000466991,1145,1]]," +
+         "[0.00266052,0.00046721]," +
+         "13.597]";
+         //"13.598]";
+
+
+   // test face
+   //const std::string imageFileName = "/mnt/project-disk/src/ObjectRecognition/data/facesTraining/tutorial-haartraining/data/CMU-MIT_Face_Test_Set/newtest/ew-courtney-david.png";
+
+   // test car
+   const std::string imageFileName = "/mnt/project-disk/src/ObjectRecognition/data/cars/TheKITTIVision/testing/image_2/000006.png";
 
    deviceSetup();
 
@@ -78,14 +100,30 @@ int main(void)
 
    std::vector<Classifier::ClassificationResult> results;
 
-   featureTypes.generateClassifier(1.0, image.getWidth(), image.getHeight(), true);
-   Classifier::detectStrongClassifier(strongClassifier, featureTypes, image.getGpuIntegralImage(), results);
+   // define all scales for a strong classifier
+   std::vector<double> classifierScales;
+   /*
+   classifierScales.push_back(0.5);
+   classifierScales.push_back(0.75);
+   classifierScales.push_back(1.0);
+   classifierScales.push_back(1.1);
+   classifierScales.push_back(1.2);
+   classifierScales.push_back(1.4);
+   */
+   classifierScales.push_back(1.6);
 
-   std::vector<Classifier::Stage> scaledStrongClassifier;
-   FeatureTypes scaledFeatureTypes;
-   Classifier::scaleStrongClassifier(0.7, strongClassifier, featureTypes, scaledStrongClassifier, scaledFeatureTypes);
-   scaledFeatureTypes.generateClassifier(1.0, image.getWidth(), image.getHeight(), true);
-   Classifier::detectStrongClassifier(scaledStrongClassifier, scaledFeatureTypes, image.getGpuIntegralImage(), results);
+   // use the defined scales to detect objects
+   for (std::vector<double>::const_iterator classifierScalesIter = classifierScales.begin();
+         classifierScalesIter != classifierScales.end();
+         ++classifierScalesIter)
+   {
+      std::vector<Classifier::Stage> scaledStrongClassifier;
+      FeatureTypes scaledFeatureTypes;
+      Classifier::scaleStrongClassifier(*classifierScalesIter, strongClassifier, featureTypes, scaledStrongClassifier, scaledFeatureTypes);
+      scaledFeatureTypes.generateClassifier(1.0, image.getWidth(), image.getHeight(), true);
+      Classifier::detectStrongClassifier(scaledStrongClassifier, scaledFeatureTypes, image.getGpuIntegralImage(), results);
+
+   }
 
    image.displayClassificationResult(results);
 

@@ -440,7 +440,6 @@ void evaluateClassifier(const uint32_t imageCount,
 {
    std::vector<double> alphas;
    alphas.reserve(betas.size());
-   double thresholdUpperBound = 0.0;
    const double D = Dprev * d;
 
    for (std::vector<double>::const_iterator betaIter = betas.begin();
@@ -454,12 +453,13 @@ void evaluateClassifier(const uint32_t imageCount,
       }
 
       alphas.push_back(alpha);
-      thresholdUpperBound += alpha;
    }
 
    std::vector<uint8_t> strongClassifierResult;
    strongClassifierResult.reserve(imageCount);
    std::vector<double> sortedAlphas;
+
+   assert(classifierSelectionResults.size() == alphas.size());
 
    // determine detection rate
    // only positive images
@@ -621,6 +621,7 @@ void updateImageWeights(const uint32_t imageCount,
          << std::endl;
 #endif
 
+   // get feature values for one classifier of all available images
    getFeatureValuesGpu<<<(imageCount + WORK_SIZE - 1) / WORK_SIZE, WORK_SIZE>>>(
          integralImages,
          availableImages,

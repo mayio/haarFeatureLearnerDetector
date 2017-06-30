@@ -551,6 +551,10 @@ __global__ void detectStrongClassifierGpu(
    const uint32_t y = pixelIdx / imageWidth;
    const uint32_t x = pixelIdx - y * imageWidth;
 
+// FIXME remove this. Just for debugging
+if (x != 649|| y != 99)
+   return;
+
    const int32_t * integralImageData = (int32_t *)(integralImage.data);
 
    double hSum = 0.0;
@@ -560,7 +564,7 @@ __global__ void detectStrongClassifierGpu(
    {
       hSum = 0.0;
       const GpuStrongClassifier::Stage & stage = stages[stageIdx];
-      double alphaSum = 0.0;
+      //double alphaSum = 0.0;
 
       // for each classifier in stage
       for (uint32_t classifierIdx = 0;  classifierIdx < stage.mClassifierCount; ++classifierIdx)
@@ -635,8 +639,12 @@ __global__ void detectStrongClassifierGpu(
          }
 
          const int32_t h = (classifierDescription.polarity * featureValue) < (classifierDescription.polarity * classifierDescription.threshold) ? 1 : 0;
+// FIXME remove this
+printf("h(%d) = pol(%d) * val(%d) < pol(%d) * threshold(%d)\n", h, classifierDescription.polarity, featureValue, classifierDescription.polarity, classifierDescription.threshold);
          hSum += static_cast<double>(h) * alpha;
-         alphaSum += alpha;
+// FIXME remove this
+printf("hSum(%f) += h(%d) * alpha(%f)\n\n", hSum, h, alpha);
+         //alphaSum += alpha;
       }
 
       if (hSum < stage.mStageThreshold)
@@ -645,7 +653,9 @@ __global__ void detectStrongClassifierGpu(
          return;
       }
 
-      //printf("Stage %d done x:%d y:%d\n",stageIdx,x,y);
+// FIXME remove this
+printf("Stage Threshold %f\n", stage.mStageThreshold);
+printf("Stage %d done x:%d y:%d\n\n\n",stageIdx,x,y);
    }
 
    //printf("Match x:%d y:%d\n",x,y);

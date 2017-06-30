@@ -17,6 +17,7 @@
 
 #include "stdint.h"
 #include "assert.h"
+#include "stdio.h"
 
 #include "opencv2/core/cuda_devptrs.hpp"
 
@@ -147,6 +148,11 @@ public:
          const uint32_t featureWidth, const uint32_t featureHeight,
          int32_t & value)
    {
+// FIXME remove this
+//printf("x:%d y:%d lineStep:%d rectWidth:%d rectHeight:%d featureWidth:%d featureHeight:%d\n",
+//      x,y,lineStep,rectElementWidth,rectElementHeight,featureWidth,featureHeight);
+
+
       value = 0;
       const uint32_t rectElementWidthErode = rectElementWidth - 1;
       const uint32_t rectElementHeightErode = rectElementHeight -1;
@@ -155,6 +161,9 @@ public:
 
       const int32_t * integralImageLine  = integralImage + y * lineStep;
       const int32_t * integralImageLine2 = integralImageLine + rectElementHeightErode * lineStep;
+
+// FIXME remove this
+//printf("integralImageLine:%#010X integralImageLine2:%#010X \n", integralImageLine, integralImageLine2);
 
       int32_t i1 = integralImageLine[x];                          // integralImage(yi, xi);
       int32_t i2 = integralImageLine[x + rectElementWidthErode];  // integralImage(yi, xi + rectElementWidth);
@@ -172,8 +181,13 @@ public:
             Classifier::getRectangleType(classifier, h * featureWidth + w, rectangleType);
             value += ((i4 + i1 - i2 - i3) * rectangleType);
 
+// FIXME remove this
+//printf("h:%d w:%d xi:%d i1:%d i2:%d i3:%d i4:%d val:%d rectType:%d\n",h,w,xi,i1,i2,i3,i4,value,rectangleType);
+
             if (w + 1 < featureWidth)
             {
+// FIXME remove this
+//printf(" --- right shift --- \n");
                i1 = i2;
                i3 = i4;
 
@@ -186,9 +200,13 @@ public:
 
          if (h + 1 < featureHeight)
          {
+// FIXME remove this
+//printf(" --- bottom shift --- \n");
             xi = x;
             integralImageLine = integralImageLine2;
             integralImageLine2 = integralImageLine2 + rectElementHeightErode * lineStep;
+// FIXME remove this
+//printf("integralImageLine:%#010X integralImageLine2:%#010X \n", integralImageLine, integralImageLine2);
             i1 = k3;
             i2 = k4;
             i3 = integralImageLine2[xi];

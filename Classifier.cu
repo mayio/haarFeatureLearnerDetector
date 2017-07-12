@@ -521,6 +521,134 @@ void Classifier::scaleStrongClassifier(
    }
 }
 
+__device__ __forceinline__ void detectStrongClassifierAtPoint(
+      const int32_t * const integralImage,
+      const uint32_t imageWidth,
+      const uint32_t imageHeight,
+      const uint32_t step,
+      const uint32_t x,
+      const uint32_t y,
+      const uint8_t * const allClassifierData,
+      const GpuStrongClassifier::Stage * const stages,
+      const uint32_t stageCount,
+      bool & detected,
+      double & hSum
+      )
+{
+   detected = false;
+
+   // for each stage
+   for (uint32_t stageIdx = 0; stageIdx < stageCount; ++stageIdx)
+   {
+      hSum = 0.0;
+      const GpuStrongClassifier::Stage & stage = stages[stageIdx];
+
+      // for each classifier in stage
+      for (uint32_t classifierIdx = 0;  classifierIdx < stage.mClassifierCount; ++classifierIdx)
+      {
+         const Classifier::SelectionResult & classifierDescription = stage.mSelectionResults[classifierIdx];
+         const double beta = stage.mBetas[classifierIdx];
+
+         double alpha = 40.0;
+
+         if  (beta != 0.0)
+             alpha = log(1.0/beta);
+
+         // get all classifier of one type - here we have only one
+         uint32_t featureHeight;
+         uint32_t featureWidth;
+         uint32_t classifierCount;
+         const uint8_t * classifiers = NULL;
+
+         Classifier::getClassifier(
+               allClassifierData,
+               classifierDescription.classifierTypeIdx,
+               classifierCount,
+               &classifiers,
+               featureWidth,
+               featureHeight);
+
+         assert(classifiers);
+
+         uint32_t rectWidth;
+         uint32_t rectHeight;
+         const uint8_t * singleClassifier = NULL;
+
+         Classifier::getClassifierScale(
+               classifiers,
+               classifierDescription.classifierIdx,
+               &singleClassifier,
+               rectWidth,
+               rectHeight);
+
+         assert(singleClassifier);
+
+         const uint32_t classifierLeftPoint = x + classifierDescription.x;
+         const uint32_t classifierUpperPoint = y + classifierDescription.y;
+         const uint32_t classifierRightPoint = classifierLeftPoint + rectWidth * featureWidth;
+         const uint32_t classifierBottomPoint = classifierUpperPoint + rectHeight * featureHeight;
+
+         const bool outOfRange = ((classifierRightPoint <= imageWidth)
+               && (classifierBottomPoint <= imageHeight)) ? false : true;
+
+         int32_t featureValue = INT_MAX;
+
+/*TODO: debug message
+         if (threadIdx.x == 0 && blockIdx.x == 0)
+         {
+            printf("stage:%d featureWidth:%d, featureHeight:%d, rectWidth:%d, rechtHeight:%d typeIdx:%d outOfRange:%d\n",
+                  stageIdx, featureWidth, featureHeight, rectWidth, rectHeight, classifierDescription.classifierTypeIdx, outOfRange);
+            printf("classifierLeftPoint:%d classifierUpperPoint:%d classifierRightPoint:%d classifierBottomPoint:%d\n",
+                  classifierLeftPoint, classifierUpperPoint, classifierRightPoint, classifierBottomPoint);
+         }
+*/
+
+         if (!outOfRange)
+         {
+            Classifier::getFeatureValue(
+                  integralImage,
+                  singleClassifier,
+                  // FIXME check this
+                  step,
+                  classifierLeftPoint,
+                  classifierUpperPoint,
+                  rectWidth, rectHeight,
+                  featureWidth, featureHeight,
+                  featureValue);
+            const int32_t h = (classifierDescription.polarity * featureValue) < (classifierDescription.polarity * classifierDescription.threshold) ? 1 : 0;
+            hSum += static_cast<double>(h) * alpha;
+// FIXME remove this
+/*TODO: debug message
+if (threadIdx.x == 1 && blockIdx.x == 1)
+{
+  printf("h(%d) = pol(%d) * val(%d) < pol(%d) * threshold(%d)\n", h, classifierDescription.polarity, featureValue, classifierDescription.polarity, classifierDescription.threshold);
+  printf("hSum(%f) += h(%d) * alpha(%f)\n\n", hSum, h, alpha);
+}
+*/
+            //alphaSum += alpha;
+         }
+         else
+         {
+            hSum = 0.0;
+            detected = false;
+            return;
+         }
+      }
+
+      if (hSum < stage.mStageThreshold)
+      {
+         hSum = 0.0;
+         detected = false;
+         return;
+      }
+      else
+      {
+         detected = true;
+      }
+   }
+}
+
+
 __global__ void detectStrongClassifierGpu(
       cv::gpu::PtrStepSz<int32_t> integralImage,
       const uint32_t imageWidth,
@@ -552,114 +680,77 @@ __global__ void detectStrongClassifierGpu(
    const uint32_t x = pixelIdx - y * imageWidth;
 
 // FIXME remove this. Just for debugging
-if (x != 649|| y != 99)
-   return;
+//if (x != 684 || y != 59 )
+//   return;
 
    const int32_t * integralImageData = (int32_t *)(integralImage.data);
-
+   bool detected = false;
    double hSum = 0.0;
 
-   // for each stage
-   for (uint32_t stageIdx = 0; stageIdx < stageCount; ++stageIdx)
-   {
-      hSum = 0.0;
-      const GpuStrongClassifier::Stage & stage = stages[stageIdx];
-      //double alphaSum = 0.0;
-
-      // for each classifier in stage
-      for (uint32_t classifierIdx = 0;  classifierIdx < stage.mClassifierCount; ++classifierIdx)
-      {
-         const Classifier::SelectionResult & classifierDescription = stage.mSelectionResults[classifierIdx];
-         const double beta = stage.mBetas[classifierIdx];
-
-         double alpha = 40.0;
-
-         if  (beta != 0)
-             alpha = log(1/beta);
-
-         // get all classifier of one type - here we have only one
-         uint32_t featureHeight;
-         uint32_t featureWidth;
-         uint32_t classifierCount;
-         const uint8_t * classifiers = NULL;
-
-         Classifier::getClassifier(
-               allClassifierData,
-               classifierDescription.classifierTypeIdx,
-               classifierCount,
-               &classifiers,
-               featureWidth,
-               featureHeight);
-
-         assert(classifiers);
-
-         uint32_t rectWidth;
-         uint32_t rectHeight;
-         const uint8_t * singleClassifier = NULL;
-
-         Classifier::getClassifierScale(classifiers, 0, &singleClassifier, rectWidth,
-               rectHeight);
-         assert(singleClassifier);
-
-         const uint32_t classifierLeftPoint = x + classifierDescription.x;
-         const uint32_t classifierUpperPoint = y + classifierDescription.y;
-         const uint32_t classifierRightPoint = classifierLeftPoint + rectWidth * featureWidth;
-         const uint32_t classifierBottomPoint = classifierUpperPoint + rectHeight * featureHeight;
-
-         const bool outOfRange = ((classifierRightPoint <= imageWidth)
-               && (classifierBottomPoint <= imageHeight)) ? false : true;
-
-         int32_t featureValue = INT_MAX;
-
-         /*
-         if (threadIdx.x == 0 && blockIdx.x == 0)
-         {
-            printf("stage:%d featureWidth:%d, featureHeight:%d, rectWidth:%d, rechtHeight:%d typeIdx:%d outOfRange:%d\n",
-                  stageIdx, featureWidth, featureHeight, rectWidth, rectHeight, classifierDescription.classifierTypeIdx, outOfRange);
-            printf("classifierLeftPoint:%d classifierUpperPoint:%d classifierRightPoint:%d classifierBottomPoint:%d\n",
-                  classifierLeftPoint, classifierUpperPoint, classifierRightPoint, classifierBottomPoint);
-         }
-         */
-
-         if (!outOfRange)
-         {
-            // fixme remove this
-            // int32_t * integralImagePtrY = (int32_t *)((uint8_t *)(integralImageData) + classifierUpperPoint * integralImage.step);
-
-            Classifier::getFeatureValue(
-                  integralImageData,
-                  singleClassifier,
-                  // FIXME check this
-                  integralImage.step / sizeof(uint32_t),
-                  classifierLeftPoint,
-                  classifierUpperPoint,
-                  rectWidth, rectHeight,
-                  featureWidth, featureHeight,
-                  featureValue);
-         }
-
-         const int32_t h = (classifierDescription.polarity * featureValue) < (classifierDescription.polarity * classifierDescription.threshold) ? 1 : 0;
-// FIXME remove this
-printf("h(%d) = pol(%d) * val(%d) < pol(%d) * threshold(%d)\n", h, classifierDescription.polarity, featureValue, classifierDescription.polarity, classifierDescription.threshold);
-         hSum += static_cast<double>(h) * alpha;
-// FIXME remove this
-printf("hSum(%f) += h(%d) * alpha(%f)\n\n", hSum, h, alpha);
-         //alphaSum += alpha;
-      }
-
-      if (hSum < stage.mStageThreshold)
-      {
-         results[pixelIdx] = 0.0;
-         return;
-      }
+   detectStrongClassifierAtPoint(
+         integralImageData,
+         imageWidth,
+         imageHeight,
+         integralImage.step / sizeof(uint32_t),
+         x, y,
+         allClassifierData,
+         stages,
+         stageCount,
+         detected,
+         hSum
+         );
 
 // FIXME remove this
-printf("Stage Threshold %f\n", stage.mStageThreshold);
-printf("Stage %d done x:%d y:%d\n\n\n",stageIdx,x,y);
-   }
+//printf("Stage Threshold %f\n", stage.mStageThreshold);
+//printf("Stage %d done x:%d y:%d\n\n\n",stageIdx,x,y);
+
 
    //printf("Match x:%d y:%d\n",x,y);
    results[pixelIdx] = hSum;
+}
+
+__global__ void detectStrongClassifierOnImageSetGpu(
+      const int32_t * const integralImages,
+      const uint32_t startImageIdx,
+      const uint32_t imageCount,
+      const uint32_t imageWidth,
+      const uint32_t imageHeight,
+      const uint8_t * const allClassifierData,
+      const GpuStrongClassifier::Stage * const stages,
+      const uint32_t stageCount,
+      bool * allDetected)
+{
+   assert(integralImages);
+   assert(allClassifierData);
+   assert(stages);
+   assert(allDetected);
+
+   const uint32_t imageIdx =  blockIdx.x * blockDim.x + threadIdx.x;
+
+   if (!(imageIdx < imageCount))
+   {
+      return;
+   }
+
+   const uint32_t pixelCountPerImage = imageHeight * imageWidth;
+   const int32_t * const  integralImageData = integralImages + pixelCountPerImage * (imageIdx + startImageIdx);
+   bool detected = false;
+   double hSum = 0.0;
+
+   detectStrongClassifierAtPoint(
+         integralImageData,
+         imageWidth,
+         imageHeight,
+         imageWidth,
+         0, 0,
+         allClassifierData,
+         stages,
+         stageCount,
+         detected,
+         hSum
+         );
+
+   allDetected[imageIdx] = detected;
 }
 
 bool Classifier::detectStrongClassifier(
@@ -679,10 +770,9 @@ bool Classifier::detectStrongClassifier(
    uint32_t strongClassifierYmax;
    Classifier::sizeStrongClassifier(strongClassifier, featureTypes, strongClassifierXmin, strongClassifierYmin, strongClassifierXmax, strongClassifierYmax);
 
-   CUDA_CHECK_RETURN(cudaHostAlloc(
+   CUDA_CHECK_RETURN(cudaMalloc(
          &resultsPtr,
-         sizeof(double) * pixelCount,
-         cudaHostAllocMapped)
+         sizeof(double) * pixelCount)
          );
 
    const GpuStrongClassifier gpuStrongClassifier(strongClassifier);
@@ -731,8 +821,8 @@ bool Classifier::detectStrongClassifier(
          uint32_t x = i - gpuIntegralImage.cols * y;
          // std::cout << "detectStrongClassifier: at x:" << x << " y:" << y << std::endl;
          Classifier::ClassificationResult classificationResult;
-         classificationResult.x = x + strongClassifierXmin;
-         classificationResult.y = y + strongClassifierYmin;
+         classificationResult.x = x; // x + strongClassifierXmin;
+         classificationResult.y = y; // y + strongClassifierYmin;
          classificationResult.height = strongClassifierYmax - strongClassifierYmin;
          classificationResult.width = strongClassifierXmax - strongClassifierXmin;
          classificationResult.strength = hostResult[i];
@@ -741,9 +831,79 @@ bool Classifier::detectStrongClassifier(
    }
    ////////////////
 
-   CUDA_CHECK_RETURN(cudaFreeHost(resultsPtr));
+   CUDA_CHECK_RETURN(cudaFree(resultsPtr));
    return detected;
 }
+
+void Classifier::detectStrongClassifierOnImageSet(
+      const std::vector<Classifier::Stage> & strongClassifier,
+      FeatureTypes & featureTypes,
+      const int32_t * const gpuIntegralImages,
+      const uint32_t startImageIdx,
+      const uint32_t imageCount,
+      const uint32_t imageWidth,
+      const uint32_t imageHeight,
+      bool * results
+      )
+{
+#ifdef DEBUG
+         std::cout << "Debug: detectStrongClassifierOnImageSet startImageIdx:" << startImageIdx
+               << ", imageCount:" << imageCount
+               << ", imageWidth:" << imageWidth
+               << ", imageHeight:" << imageHeight
+               << ", stageCount:" << strongClassifier.size()
+               << std::endl;
+#endif
+
+   bool * resultsGpu = NULL;
+
+   CUDA_CHECK_RETURN(cudaMalloc(
+         &resultsGpu,
+         sizeof(bool) * imageCount)
+         );
+
+   const GpuStrongClassifier gpuStrongClassifier(strongClassifier);
+   const uint32_t threadCount = 256;
+   const uint32_t blockCount = (imageCount + threadCount - 1) / threadCount;
+   uint8_t * gpuFeatureData = FeatureTypes::getConstantFeatureData();
+
+   cudaEvent_t start;
+   cudaEvent_t stop;
+   cudaEventCreate(&start);
+   cudaEventCreate(&stop);
+   cudaEventRecord(start);
+
+   detectStrongClassifierOnImageSetGpu<<<blockCount, threadCount>>>(
+         gpuIntegralImages,
+         startImageIdx,
+         imageCount,
+         imageWidth,
+         imageHeight,
+         gpuFeatureData,
+         gpuStrongClassifier.getGpuStages(),
+         gpuStrongClassifier.mStagesCount,
+         resultsGpu);
+
+   CUDA_CHECK_RETURN(cudaPeekAtLastError());
+   CUDA_CHECK_RETURN(cudaThreadSynchronize()); // Wait for the GPU launched work to complete
+   CUDA_CHECK_RETURN(cudaGetLastError());
+
+   cudaEventRecord(stop);
+   cudaEventSynchronize(stop);
+
+   dumpElapsedTime("detectStrongClassifierOnImageSet:", start, stop);
+   dumpFreeMemory("detectStrongClassifierOnImageSet:");
+
+   CUDA_CHECK_RETURN(
+         cudaMemcpy(
+               results,
+               resultsGpu,
+               sizeof(bool) * imageCount,
+               cudaMemcpyDeviceToHost));
+
+   CUDA_CHECK_RETURN(cudaFree(resultsGpu));
+}
+
 
 void Classifier::addUniqueResult(const Classifier::ClassificationResult & newResult, std::vector<Classifier::ClassificationResult> & results)
 {

@@ -99,14 +99,18 @@ int main(void)
    outputfile.open(outputFileName.c_str());
 
    // settings
-   const uint32_t ratioX = 1;
-   const uint32_t ratioY = 1;
+   const uint32_t ratioX = 2;
+   const uint32_t ratioY = 2;
    const double classifierScale = 1.25;
+   const uint32_t maxImagesCount = 40000;
 
    const uint32_t stages = 10;
    const double f = 0.3;  // false positive rate per layer
    const double d = 0.99; // minimum acceptable detection rate per layer
    const double fTarget = pow(f, stages); // overall false positive rate
+
+   const uint32_t factorFirstStageImages = 4; // factor with positive images to learn the first stage
+   const uint32_t factorImagesPerStage   = 2; // factor with positive images to learn the following stages
 
    // faces
    // const std::string pathPositiveImages = "/mnt/project-disk/src/ObjectRecognition/data/facesTraining/att_faces/*.pgm";
@@ -128,7 +132,7 @@ int main(void)
    std::cout << "Free memory:" << mem_free_0 << " Mem total: " << mem_tot_0
          << std::endl;
 
-   cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1024 * 1024 * 600);
+   cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1024 * 1024 * 300);
 
    cudaMemGetInfo(&mem_free_0, &mem_tot_0);
    std::cout << "Free memory:" << mem_free_0 << " Mem total: " << mem_tot_0
@@ -154,30 +158,53 @@ int main(void)
    fileNames.insert(fileNames.end(), fileNamesPos.begin(), fileNamesPos.end());
    fileNames.insert(fileNames.end(), fileNamesNeg.begin(), fileNamesNeg.end());
 
+   // if there are too many images reduce the count
+   if (fileNames.size() > maxImagesCount)
+   {
+      fileNames.resize(maxImagesCount);
+   }
+
    cv::Mat firstImage = cv::imread(*fileNames.begin(), CV_LOAD_IMAGE_GRAYSCALE);
+
    const uint32_t imageWidth = firstImage.cols;
    const uint32_t imageHeight = firstImage.rows;
-   uint32_t countImages = fileNames.size();
-   assert(countImages > 0);
+
+   uint32_t maxLoadedImages = fileNames.size();
+   const uint32_t maxImagesFirstStage = fileNamesPos.size() * factorFirstStageImages; // images to be learned at the first stage
+   const uint32_t maxImagesPerStage = fileNamesPos.size() * factorImagesPerStage;     // images for learning at the following stages
+   uint32_t curCountImages = maxImagesFirstStage;
+
+   if (maxImagesFirstStage > maxLoadedImages)
+   {
+      std::cout << "Less then " << maxImagesFirstStage << " where loaded:" << maxLoadedImages << std::endl;
+      curCountImages = maxLoadedImages;
+   }
+
+   if (fileNames.size() < curCountImages)
+   {
+      curCountImages = fileNames.size();
+   }
+
+   assert(maxLoadedImages > 0);
 
    uchar * imagesMem = NULL;
    imagesMem =
-         new uchar[countImages * sizeof(uchar) * imageHeight * imageWidth];
+         new uchar[maxLoadedImages * imageHeight * imageWidth];
 
    uchar * imagesGpuMem = NULL;
    CUDA_CHECK_RETURN(
          cudaMalloc((void** )&imagesGpuMem,
-               countImages * sizeof(uchar) * imageHeight * imageWidth));
+               maxLoadedImages * imageHeight * imageWidth));
 
    int32_t * integralImagesGpuMem = NULL;
 
    CUDA_CHECK_RETURN(
          cudaMalloc((void** )&integralImagesGpuMem,
-               countImages * sizeof(int32_t) * imageHeight * imageWidth));
+               maxLoadedImages * sizeof(int32_t) * imageHeight * imageWidth));
 
    // pointer to integral images (index)
    std::vector<uint32_t> availableIntegralImages;
-   availableIntegralImages.reserve(countImages);
+   availableIntegralImages.reserve(curCountImages);
 
 #ifdef DEBUG
    cudaMemGetInfo(&mem_free_0, &mem_tot_0);
@@ -186,7 +213,7 @@ int main(void)
          << std::endl;
 #endif
    bool fileError = false;
-   for (uint32_t i = 0; i < countImages; ++i)
+   for (uint32_t i = 0; i < maxLoadedImages; ++i)
    {
       const std::string & fileName = fileNames[i];
       uchar * imagePtr = &imagesMem[imageHeight * imageWidth * i];
@@ -220,7 +247,11 @@ int main(void)
       const cv::gpu::PtrStepSz<uchar> imageMatPtr = gpuImages.back();
 
       imagePtrsVector.push_back(imageMatPtr);
-      availableIntegralImages.push_back(i);
+
+      if (i < maxImagesFirstStage)
+      {
+         availableIntegralImages.push_back(i);
+      }
    }
 
    if (fileError)
@@ -228,34 +259,38 @@ int main(void)
       return 1;
    }
 
-#ifdef DEBUG
-   std::cout << "Debug: Count positive images:" << fileNamesPos.size()
+   std::cout << "Count positive images:" << fileNamesPos.size()
          << std::endl;
    const uint32_t countPosImages = fileNamesPos.size();
-   std::cout << "Debug: Count negative images:" << fileNamesNeg.size()
+   std::cout << "Count all negative images:" << maxLoadedImages - countPosImages
          << std::endl;
 
-   std::cout << "Debug: Ratio X:" << ratioX << " Y:" << ratioY << std::endl;
-#endif
+   std::cout << "Count negative images - first stage:" << curCountImages - countPosImages
+         << std::endl;
+
+   std::cout << "Count Images to be learned:" << maxLoadedImages << std::endl;
+   std::cout << "Count Images to be learned in first stage:" << curCountImages << std::endl;
+
+   std::cout << "Ratio X:" << ratioX << " Y:" << ratioY << std::endl;
 
    CUDA_CHECK_RETURN(
          cudaMalloc((void** )&gpuImagesPtr,
-               countImages * sizeof(cv::gpu::PtrStepSz<uchar>)));
+               maxLoadedImages * sizeof(cv::gpu::PtrStepSz<uchar>)));
 
    CUDA_CHECK_RETURN(
          cudaMemcpy(gpuImagesPtr, &imagePtrsVector[0],
-               countImages * sizeof(cv::gpu::PtrStepSz<uchar>),
+               maxLoadedImages * sizeof(cv::gpu::PtrStepSz<uchar>),
                cudaMemcpyHostToDevice));
 
 #ifdef DEBUG
    cudaMemGetInfo(&mem_free_0, &mem_tot_0);
-   std::cout << "Debug: Calc integral images:" << countImages << std::endl;
+   std::cout << "Debug: Calc integral images:" << maxLoadedImages << std::endl;
    std::cout << "Debug: Free: " << mem_free_0 << " Mem total: " << mem_tot_0
          << std::endl;
 #endif
 
-   getIntegralImage<<<(countImages + WORK_SIZE - 1) / WORK_SIZE, WORK_SIZE>>>(
-         countImages, gpuImagesPtr, integralImagesGpuMem);
+   getIntegralImage<<<(maxLoadedImages + WORK_SIZE - 1) / WORK_SIZE, WORK_SIZE>>>(
+         maxLoadedImages, gpuImagesPtr, integralImagesGpuMem);
 
    CUDA_CHECK_RETURN(cudaThreadSynchronize()); // Wait for the GPU launched work to complete
    CUDA_CHECK_RETURN(cudaGetLastError());
@@ -267,8 +302,17 @@ int main(void)
          << std::endl;
 #endif
 
+   //
    // we don't need the original images anymore - keep the integral images in memory
+   //
    std::vector<cv::Mat>().swap(images);
+   std::vector<cv::gpu::GpuMat>().swap(gpuImages);
+
+   std::vector<std::string>().swap(fileNames);
+   std::vector<std::string>().swap(fileNamesPos);
+   std::vector<std::string>().swap(fileNamesNeg);
+   std::vector<cv::gpu::PtrStepSz<uchar> >().swap(imagePtrsVector);
+
    delete[] imagesMem;
    CUDA_CHECK_RETURN(cudaFree(gpuImagesPtr));
    CUDA_CHECK_RETURN(cudaFree(imagesGpuMem));
@@ -278,11 +322,11 @@ int main(void)
 
    CUDA_CHECK_RETURN(
          cudaMalloc((void** )&availableIntegralImagesGpu,
-               countImages * sizeof(uint32_t)));
+               maxLoadedImages * sizeof(uint32_t)));
 
    CUDA_CHECK_RETURN(
          cudaMemcpy(availableIntegralImagesGpu, &availableIntegralImages[0],
-               countImages * sizeof(uint32_t), cudaMemcpyHostToDevice));
+               curCountImages * sizeof(uint32_t), cudaMemcpyHostToDevice));
 
 #ifdef DEBUG
    cudaMemGetInfo(&mem_free_0, &mem_tot_0);
@@ -299,21 +343,21 @@ int main(void)
     */
 
    // init weight for all images
-   double * imageWeightsPtr = new double[countImages];
+   double * imageWeightsPtr = new double[curCountImages];
    double * gpuImageWeightsPtr = NULL;
 
    CUDA_CHECK_RETURN(
          cudaMalloc((void ** )&gpuImageWeightsPtr,
-               countImages * sizeof(cv::gpu::PtrStepSz<uchar>)));
+               curCountImages * sizeof(double)));
 
-   double initWeight = 1.0 / countImages;
+   double initWeight = 1.0 / curCountImages;
 
-   for (uint32_t i = 0; i < countImages; ++i)
+   for (uint32_t i = 0; i < curCountImages; ++i)
    {
       imageWeightsPtr[i] = initWeight;
    }
 
-   cudaMemcpy(gpuImageWeightsPtr, imageWeightsPtr, countImages * sizeof(double),
+   cudaMemcpy(gpuImageWeightsPtr, imageWeightsPtr, curCountImages * sizeof(double),
          cudaMemcpyHostToDevice);
 
    const uint32_t pixelCount = (imageWidth / ratioX) * (imageHeight / ratioY);
@@ -374,6 +418,7 @@ int main(void)
       Fcurr = Fprev;
       Dcurr = Dprev;
       std::vector<uint32_t> falsePositiveIdx;
+      falsePositiveIdx.reserve(curCountImages - countPosImages);
 
 #ifdef DEBUG
       std::cout << "Debug: (f * Fprev):" << (f * Fprev);
@@ -387,12 +432,24 @@ int main(void)
          roundIdx++;
          uint32_t newClassifierCount = 0;
 
-         adaBoost(roundIdx, countImages, countPosImages, pixelCount, ratioX,
-               ratioY, imageWidth, imageHeight, featureTypes,
-               integralImagesGpuMem, availableIntegralImagesGpu,
-               imageWeightsPtr, gpuImageWeightsPtr, start, stop,
-               classifierStage.stagedClassifier, results, gpuResults,
-               newClassifierCount, outputfile);
+         adaBoost(
+               roundIdx,
+               curCountImages, countPosImages,
+               pixelCount,
+               ratioX,
+               ratioY,
+               imageWidth, imageHeight,
+               featureTypes,
+               integralImagesGpuMem,
+               availableIntegralImagesGpu,
+               imageWeightsPtr,
+               gpuImageWeightsPtr,
+               start, stop,
+               classifierStage.stagedClassifier,
+               results,
+               gpuResults,
+               newClassifierCount,
+               outputfile);
 
          for (uint32_t i = classifierStage.stagedClassifier.size()
                - newClassifierCount;
@@ -400,14 +457,14 @@ int main(void)
          {
             if (classifierStage.stagedClassifier[i].error != 0.0)
             {
-               updateImageWeights(countImages, countPosImages,
+               updateImageWeights(curCountImages, countPosImages,
                      integralImagesGpuMem, availableIntegralImagesGpu, imageWidth,
                      imageHeight, featureTypes,
                      classifierStage.stagedClassifier[i], imageWeightsPtr,
                      classifierStage.betas, featureValuesPtrs);
 
                cudaMemcpy(gpuImageWeightsPtr, imageWeightsPtr,
-                     countImages * sizeof(double), cudaMemcpyHostToDevice);
+                     curCountImages * sizeof(double), cudaMemcpyHostToDevice);
             }
          }
 
@@ -419,7 +476,7 @@ int main(void)
             break;
          }
 
-         evaluateClassifier(countImages, countPosImages,
+         evaluateClassifier(curCountImages, countPosImages,
                classifierStage.stagedClassifier, featureValuesPtrs,
                classifierStage.betas, d, Dprev, Fcurr, Dcurr, falsePositiveIdx,
                classifierStage.stageThreshold);
@@ -446,7 +503,54 @@ int main(void)
 
       featureValuesPtrs.clear();
 
-      if (falsePositiveIdx.size() == 0)
+      // create a new set of positive images and false positive images
+      availableIntegralImages.clear();
+      availableIntegralImages.reserve(maxImagesPerStage);
+
+      for (uint32_t i = 0; i < countPosImages; ++i)
+      {
+         availableIntegralImages.push_back(i);
+      }
+
+      // add the false positive images to the set of images
+      // that shall be used for learning in the next round
+
+      //use the generated classifier to detect all false positives on the complete set
+      const uint32_t maxNegativeImages = maxLoadedImages - countPosImages;
+      bool * falsePositives = new bool[maxNegativeImages];
+
+      Classifier::detectStrongClassifierOnImageSet(
+            classifierStages,
+            featureTypes,
+            integralImagesGpuMem,
+            countPosImages,
+            maxNegativeImages,
+            imageWidth,
+            imageHeight,
+            falsePositives
+            );
+
+      uint32_t falsePositivesCount = 0;
+
+      // fill up available images with false positives
+      for (uint32_t falsePositiveIdxIter = 0;
+            (falsePositiveIdxIter < maxNegativeImages) && (availableIntegralImages.size() <= maxImagesPerStage);
+            ++falsePositiveIdxIter)
+      {
+         if (true == falsePositives[falsePositiveIdxIter])
+         {
+            falsePositivesCount++;
+            availableIntegralImages.push_back(
+                  falsePositiveIdxIter + countPosImages);
+         }
+      }
+
+      delete[] falsePositives;
+
+      std::cout << "False Positive images detected:" << falsePositivesCount
+                     << std::endl;
+
+      if (availableIntegralImages.size() <= countPosImages)
       {
 #ifdef DEBUG
          std::cout << "Debug: No false positive images are left. Finishing!"
@@ -455,42 +559,20 @@ int main(void)
          break;
       }
 
-      // create a new set of positive images and false positive images
-      std::vector<uint32_t> availableIntegralImagesOld;
-      std::swap(availableIntegralImages, availableIntegralImagesOld);
-      availableIntegralImages.clear();
-      availableIntegralImages.reserve(countPosImages + falsePositiveIdx.size());
-
-      for (uint32_t i = 0; i < countPosImages; ++i)
-      {
-         availableIntegralImages.push_back(i);
-      }
-
-      for (uint32_t falsePositiveIdxIter = 0;
-            falsePositiveIdxIter < falsePositiveIdx.size();
-            ++falsePositiveIdxIter)
-      {
-         availableIntegralImages.push_back(
-               availableIntegralImagesOld[
-                                          falsePositiveIdx[falsePositiveIdxIter]
-                                          ]
-               );
-      }
-
-      countImages = availableIntegralImages.size();
+      curCountImages = availableIntegralImages.size();
 
       CUDA_CHECK_RETURN(
             cudaMemcpy(availableIntegralImagesGpu, &availableIntegralImages[0],
-                  countImages * sizeof(int32_t), cudaMemcpyHostToDevice));
+                  curCountImages * sizeof(int32_t), cudaMemcpyHostToDevice));
 
 #ifdef DEBUG
-      std::cout << "Debug: Images left:" << countImages << std::endl;
+      std::cout << "Debug: Images left:" << curCountImages << std::endl;
 #endif
 
       // init image weights
-      double initWeight = 1.0 / countImages;
+      double initWeight = 1.0 / curCountImages;
 
-      for (uint32_t i = 0; i < countImages; ++i)
+      for (uint32_t i = 0; i < curCountImages; ++i)
       {
          imageWeightsPtr[i] = initWeight;
       }
@@ -549,7 +631,7 @@ int main(void)
    prettyClassifier << "]" << std::endl;
    std::cout << prettyClassifier.str();
 
-   outputfile << prettyClassifier;
+   outputfile << prettyClassifier.str();
    outputfile.close();
 
    CUDA_CHECK_RETURN(cudaFree(integralImagesGpuMem));

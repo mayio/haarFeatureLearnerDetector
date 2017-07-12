@@ -308,7 +308,7 @@ __global__ void getFeatureValuesGpu(
          rectHeight, classifierWidth, classifierHeight,
          featureValues[imageIdx].featureValue);
 
-   featureValues[imageIdx].imageIdx = imageIdx;
+   featureValues[imageIdx].imageIdx = availableImages[imageIdx];
    featureValues[imageIdx].imageType = (positiveImages > imageIdx) ? 1 : 0;
 }
 
@@ -475,6 +475,7 @@ void evaluateClassifier(const uint32_t imageCount,
                featureValuesPtrs[k][i];
          const int32_t featureValue = featureValueResult.featureValue;
          assert(featureValue != INT_MAX);
+         assert(featureValueResult.imageType == 1); // assert positive image
 
          const int32_t h =
                ((classifierSelectionResult.polarity * featureValue)
@@ -509,6 +510,7 @@ void evaluateClassifier(const uint32_t imageCount,
                featureValuesPtrs[k][i];
          const int32_t featureValue = featureValueResult.featureValue;
          assert(featureValue != INT_MAX);
+         assert(featureValueResult.imageType == (i < positiveImages) ? 1 : 0); // assert positive/negative image
 
          const int32_t h =
                ((classifierSelectionResult.polarity * featureValue)
@@ -555,29 +557,20 @@ void evaluateClassifier(const uint32_t imageCount,
    falsePositiveIdx.clear();
    falsePositiveIdx.reserve(imageCount);
 
+   assert(strongClassifierResult.size() == imageCount);
+
    for (uint32_t i = positiveImages; i < strongClassifierResult.size(); ++i)
    {
-      if (strongClassifierResult[i] != 0)
+      // if image was detected as positive (but it should negative)
+      if (strongClassifierResult[i] == 1)
       {
          falsePositives++;
-
-         std::vector<uint32_t>::iterator falsePositiveIdxIter =
-               std::upper_bound(falsePositiveIdx.begin(),
-                     falsePositiveIdx.end(), i);
-
-         if (falsePositiveIdxIter == falsePositiveIdx.end())
-         {
-            falsePositiveIdx.push_back(i);
-         }
-         else if (*falsePositiveIdxIter != i)
-         {
-            falsePositiveIdx.insert(falsePositiveIdxIter, i);
-         }
+         falsePositiveIdx.push_back(i);
       }
    }
 
-   Di = static_cast<double>(detectedObjects) / positiveImages;
-   Fi = static_cast<double>(falsePositives) / (imageCount - positiveImages);
+   Di = static_cast<double>(detectedObjects) / static_cast<double>(positiveImages);
+   Fi = static_cast<double>(falsePositives) / static_cast<double>(imageCount - positiveImages);
 
 #ifdef DEBUG
    std::cout << "Detected Objects: " << detectedObjects;

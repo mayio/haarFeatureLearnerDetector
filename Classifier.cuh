@@ -255,6 +255,17 @@ public:
          std::vector<Classifier::ClassificationResult> & results
          );
 
+   static void detectStrongClassifierOnImageSet(
+         const std::vector<Classifier::Stage> & strongClassifier,
+         FeatureTypes & featureTypes,
+         const int32_t * const gpuIntegralImages,
+         const uint32_t startImageIdx,
+         const uint32_t imageCount,
+         const uint32_t imageWidth,
+         const uint32_t imageHeight,
+         bool * results
+         );
+
    static texture<int32_t, 2> & getTexIntegralImage();
 private:
    template<typename T>

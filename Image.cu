@@ -199,14 +199,14 @@ bool Image::fromFile(const std::string & fileName, Image & image)
          //cudaEventSynchronize(stop);
 
          //dumpElapsedTime("fromFile: normalize image", start, stop);
-         image.mImage.convertTo(image.mImage, CV_8U);
+         //image.mImage.convertTo(image.mImage, CV_8U);
 
          image.mGpuImage.upload(image.mImage);
 
          image.mImageWidth = image.mImage.cols;
          image.mImageHeight = image.mImage.rows;
-          //image.mImageWidth = 100;
-          //image.mImageHeight = 100;
+          //image.mImageWidth = 20;
+          //image.mImageHeight = 10;
          //threadCount = image.mImageHeight;
 
          std::cout << "fromFile: ImageDimension: width:" << image.mImageWidth << " height:" << image.mImageHeight << std::endl;
@@ -238,10 +238,11 @@ bool Image::fromFile(const std::string & fileName, Image & image)
             image.mGpuIntegralImage.upload(integralImage);
             //image.mGpuIntegralImage = gpuIntegralImage;
             image.calcIntegralImage(threadCount);
+*/
 
+            cv::Mat integralImage;
             image.mGpuIntegralImage.download(integralImage);
             Image::displayImageFalseColor(integralImage);
-*/
          }
 /*
    }
@@ -386,9 +387,13 @@ void Image::displayClassificationResult(const std::vector<Classifier::Classifica
    double fontScale = 0.4;
    int thickness = 1;
 
-   // image and
+   // image
+
+   cv::Mat normalizedImage;
+   mGpuImage.download(normalizedImage);
+
    cv::Mat resultImage;// = mImage.clone();
-   cv::cvtColor(mImage, resultImage, CV_GRAY2RGB);
+   cv::cvtColor(normalizedImage, resultImage, CV_GRAY2RGB);
 
    for (std::vector<Classifier::ClassificationResult>::const_iterator resultIter = classificationResults.begin();
         resultIter != classificationResults.end();

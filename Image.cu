@@ -239,10 +239,11 @@ bool Image::fromFile(const std::string & fileName, Image & image)
             //image.mGpuIntegralImage = gpuIntegralImage;
             image.calcIntegralImage(threadCount);
 */
-
+/* Show integral image
             cv::Mat integralImage;
             image.mGpuIntegralImage.download(integralImage);
             Image::displayImageFalseColor(integralImage);
+*/
          }
 /*
    }

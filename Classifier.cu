@@ -594,10 +594,10 @@ __device__ __forceinline__ void detectStrongClassifierAtPoint(
          int32_t featureValue = INT_MAX;
 
 /*TODO: debug message
-         if (threadIdx.x == 0 && blockIdx.x == 0)
+//         if (threadIdx.x == 0 && blockIdx.x == 0)
          {
-            printf("stage:%d featureWidth:%d, featureHeight:%d, rectWidth:%d, rechtHeight:%d typeIdx:%d outOfRange:%d\n",
-                  stageIdx, featureWidth, featureHeight, rectWidth, rectHeight, classifierDescription.classifierTypeIdx, outOfRange);
+            printf("stage:%d featureWidth:%d, featureHeight:%d, rectWidth:%d, rechtHeight:%d typeIdx:%d classifierIdx:%d outOfRange:%d\n",
+                  stageIdx, featureWidth, featureHeight, rectWidth, rectHeight, classifierDescription.classifierTypeIdx, classifierDescription.classifierIdx, outOfRange);
             printf("classifierLeftPoint:%d classifierUpperPoint:%d classifierRightPoint:%d classifierBottomPoint:%d\n",
                   classifierLeftPoint, classifierUpperPoint, classifierRightPoint, classifierBottomPoint);
          }
@@ -619,7 +619,7 @@ __device__ __forceinline__ void detectStrongClassifierAtPoint(
             hSum += static_cast<double>(h) * alpha;
 // FIXME remove this
 /*TODO: debug message
-if (threadIdx.x == 1 && blockIdx.x == 1)
+//if (threadIdx.x == 1 && blockIdx.x == 1)
 {
   printf("h(%d) = pol(%d) * val(%d) < pol(%d) * threshold(%d)\n", h, classifierDescription.polarity, featureValue, classifierDescription.polarity, classifierDescription.threshold);
   printf("hSum(%f) += h(%d) * alpha(%f)\n\n", hSum, h, alpha);
@@ -671,17 +671,14 @@ __global__ void detectStrongClassifierGpu(
       return;
    }
 
-   /*
-   const uint32_t y = pixelIdx / integralImage.cols;
-   const uint32_t x = pixelIdx - y * integralImage.cols;
-   */
-
    const uint32_t y = pixelIdx / imageWidth;
    const uint32_t x = pixelIdx - y * imageWidth;
 
 // FIXME remove this. Just for debugging
-//if (x != 684 || y != 59 )
-//   return;
+/*
+if (x != 901 || y != 192 )
+   return;
+*/
 
    const int32_t * integralImageData = (int32_t *)(integralImage.data);
    bool detected = false;

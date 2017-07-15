@@ -54,7 +54,7 @@ void FeatureTypes::generateClassifier(const double scale, const uint32_t windowW
          ++featureTypeIdx)
    {
 #ifdef DEBUG
-      std::cout << "Debug: featureTypeIdx:" << featureTypeIdx << std::endl;
+      // std::cout << "Debug: featureTypeIdx:" << featureTypeIdx << std::endl;
 #endif
       // store the offset of each feature type
       featureTypeOffsets.push_back(memsize);
@@ -167,8 +167,8 @@ void FeatureTypes::generateClassifier(const double scale, const uint32_t windowW
             }
          }
 #ifdef DEBUG
-         std::cout << "Debug: Count Stored Classifier:"
-               << countStoredClassifier << std::endl;
+//         std::cout << "Debug: Count Stored Classifier:"
+//               << countStoredClassifier << std::endl;
 #endif
 
          // store the classifier count

@@ -190,6 +190,8 @@ bool loadImages(
       loadImageIdx++;
    }
 
+   // std::cout << "Load Images: False-Positive File Idx from previous detection:";
+
    // load falsePositive images
    for (uint32_t i = 0; i < falsePositiveImages.size() && loadImageIdx < maxImages; ++i)
    {
@@ -211,8 +213,12 @@ bool loadImages(
       }
 
       loadedImageIdx.push_back(fileIdx);
+      // std::cout << fileIdx << ",";
       loadImageIdx++;
    }
+
+   //std::cout << "Count:" <<  loadImageIdx - positiveImageCount
+   //      << std::endl;
 
    // fill up with unprocessed images
    for (; falseImageStartIdx < imageFileNames.size() && loadImageIdx < maxImages;)
@@ -245,10 +251,10 @@ bool loadImages(
 
    const uint32_t curCountImages = availableIntegralImages.size();
 
-   std::cout << "Count negative images - stage:" << curCountImages - positiveImageCount
+   std::cout << "Load Images: Count negative images - stage:" << curCountImages - positiveImageCount
          << std::endl;
 
-   std::cout << "Count Images to be learned in this stage:" << curCountImages << std::endl;
+   std::cout << "Load Images: Count Images to be learned in this stage:" << curCountImages << std::endl;
 
 
    CUDA_CHECK_RETURN(
@@ -262,8 +268,8 @@ bool loadImages(
 
 #ifdef DEBUG
    cudaMemGetInfo(&mem_free_0, &mem_tot_0);
-   std::cout << "Debug: Calc integral images:" << loadImageIdx << std::endl;
-   std::cout << "Debug: Free: " << mem_free_0 << " Mem total: " << mem_tot_0
+   std::cout << "Debug: Load Images: Calc integral images:" << loadImageIdx << std::endl;
+   std::cout << "Debug: Load Images: Free: " << mem_free_0 << " Mem total: " << mem_tot_0
          << std::endl;
 #endif
 
@@ -275,8 +281,8 @@ bool loadImages(
 
 #ifdef DEBUG
    cudaMemGetInfo(&mem_free_0, &mem_tot_0);
-   std::cout << "Debug: Calc integral images download Done!:" << std::endl;
-   std::cout << "Debug: Free: " << mem_free_0 << " Mem total: " << mem_tot_0
+   std::cout << "Debug: Load Images: Calc integral images download Done!:" << std::endl;
+   std::cout << "Debug: Load Images: Free: " << mem_free_0 << " Mem total: " << mem_tot_0
          << std::endl;
 #endif
 
@@ -300,8 +306,8 @@ bool loadImages(
 
 #ifdef DEBUG
    cudaMemGetInfo(&mem_free_0, &mem_tot_0);
-   std::cout << "Debug: Cleared original images" << std::endl;
-   std::cout << "Debug: Free memory: " << mem_free_0 << " Mem total: "
+   std::cout << "Debug: Load Images: Cleared original images" << std::endl;
+   std::cout << "Debug: Load Images: Free memory: " << mem_free_0 << " Mem total: "
          << mem_tot_0 << std::endl;
 #endif
    loadedImagesCount = loadImageIdx;
@@ -331,7 +337,8 @@ int main(void)
    const uint32_t ratioX = 2;
    const uint32_t ratioY = 2;
    const double classifierScale = 1.25;
-   const uint32_t maxLoadedImages = 40000;
+// FIMXE: set this to 40000
+   const uint32_t maxLoadedImages = 35000;
 
    const uint32_t stages = 10;
    const double f = 0.3;  // false positive rate per layer
@@ -375,6 +382,8 @@ int main(void)
    // load positive and negative images
    cv::glob(pathPositiveImages, fileNamesPos, true);
    cv::glob(pathNegativeImages, fileNamesNeg, true);
+//FIXME: remove this
+//fileNamesPos.resize(500);
 
    assert(fileNamesPos.size() > 0);
    assert(fileNamesNeg.size() > 0);
@@ -624,15 +633,6 @@ int main(void)
 
       featureValuesPtrs.clear();
 
-      // create a new set of positive images and false positive images
-      availableIntegralImages.clear();
-      availableIntegralImages.reserve(maxImagesPerStage);
-
-      for (uint32_t i = 0; i < countPosImages; ++i)
-      {
-         availableIntegralImages.push_back(i);
-      }
-
       // add the false positive images to the set of images
       // that shall be used for learning in the next round
 
@@ -645,6 +645,15 @@ int main(void)
          std::cout << "Debug: Find false positives!"
                << std::endl;
 #endif
+         // create a new set of positive images and false positive images
+         availableIntegralImages.clear();
+         availableIntegralImages.reserve(maxImagesPerStage);
+
+         for (uint32_t i = 0; i < countPosImages; ++i)
+         {
+            availableIntegralImages.push_back(i);
+         }
+
          //use the generated classifier to detect all false positives on the complete set
          const uint32_t maxNegativeImages = loadedImagesCount - countPosImages;
          bool * falsePositives = new bool[maxNegativeImages];
@@ -715,7 +724,7 @@ int main(void)
          }
 
       }
-      while(availableIntegralImages.size() < maxImagesPerStage && falseImageStartIdx < maxAvailableImages && falsePositiveImagesDetectionDone == false);
+      while(falseImageStartIdx < maxAvailableImages && falsePositiveImagesDetectionDone == false);
 
       std::cout << "False Positive images detected (in loaded images):" << loadedImagesCount - countPosImages
                      << std::endl;

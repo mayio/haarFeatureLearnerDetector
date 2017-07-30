@@ -19,7 +19,10 @@
 #include "assert.h"
 #include "stdio.h"
 
-#include "opencv2/core/cuda_devptrs.hpp"
+//#include "opencv2/core/cuda_devptrs.hpp"
+#include <opencv2/cudev/ptr2d/gpumat.hpp>
+
+
 
 // forward declaration
 namespace cv {
@@ -251,7 +254,7 @@ public:
    static bool detectStrongClassifier(
          const std::vector<Classifier::Stage> & strongClassifier,
          FeatureTypes & featureTypes,
-         const cv::gpu::GpuMat & gpuIntegralImage,
+         const cv::cuda::GpuMat & gpuIntegralImage,
          std::vector<Classifier::ClassificationResult> & results
          );
 

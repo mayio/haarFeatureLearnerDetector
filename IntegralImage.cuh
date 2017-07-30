@@ -10,16 +10,16 @@
 
 /*
 __global__ void getIntegralImage(uint32_t countImages,
-      cv::gpu::PtrStepSz<uchar> originalImages[],
-      cv::gpu::PtrStepSz<int32_t> integralImages[])
+      cv::cuda::PtrStepSz<uchar> originalImages[],
+      cv::cuda::PtrStepSz<int32_t> integralImages[])
 {
    const uint32_t imageIdx = blockIdx.x * blockDim.x + threadIdx.x;
 
    if (countImages <= imageIdx)
       return;
 
-   cv::gpu::PtrStepSz<uchar> & originalImage = originalImages[imageIdx];
-   cv::gpu::PtrStepSz<int32_t> & integralImage = integralImages[imageIdx];
+   cv::cuda::PtrStepSz<uchar> & originalImage = originalImages[imageIdx];
+   cv::cuda::PtrStepSz<int32_t> & integralImage = integralImages[imageIdx];
 
    for (uint32_t y = 0; y < originalImage.rows; ++y)
    {
@@ -49,7 +49,7 @@ __global__ void getIntegralImage(uint32_t countImages,
 
 __global__ void getIntegralImage(
       uint32_t countImages,
-      cv::gpu::PtrStepSz<uchar> originalImages[],
+      cv::cuda::PtrStepSz<uchar> originalImages[],
       int32_t * integralImages
       )
 {
@@ -58,7 +58,7 @@ __global__ void getIntegralImage(
    if (countImages <= imageIdx)
       return;
 
-   cv::gpu::PtrStepSz<uchar> & originalImage = originalImages[imageIdx];
+   cv::cuda::PtrStepSz<uchar> & originalImage = originalImages[imageIdx];
 
    uint8_t * originalImageData = (uint8_t *)(originalImage.data);
    int32_t * integralImageData = integralImages + imageIdx * originalImage.rows * originalImage.cols;

@@ -19,8 +19,12 @@
 
 // load image includes
 #include <opencv2/core/core.hpp>
-#include <opencv2/core/gpumat.hpp>
-#include <opencv2/gpu/gpu.hpp>
+
+//#include <opencv2/core/gpumat.hpp>
+//#include <opencv2/gpu/gpu.hpp>
+#include <opencv2/cudev/ptr2d/gpumat.hpp>
+#include <opencv2/core/cuda_types.hpp>
+
 #include <opencv2/highgui/highgui.hpp>
 
 #include <cuda_profiler_api.h>
@@ -662,11 +666,12 @@ void updateImageWeights(const uint32_t imageCount,
             << classifierSelectionResult.threshold << "]" << std::endl;
 #endif
 
+/*
 #ifdef DEBUG
       std::cout
             << "Classifier result for all images: (feature value, image type, error, h, image weight)";
 #endif
-
+*/
       for (uint32_t i = 0; i < imageCount; ++i)
       {
          const GetFeatureValueResult & featureValueResult = featureValues[i];
@@ -687,6 +692,7 @@ void updateImageWeights(const uint32_t imageCount,
 
          double & weight = imageWeights[i];
 #ifdef DEBUG
+/*
          std::cout << "[" << featureValue << "," << imageType << "," << error
                << "," << h << "," << weight << "],";
 
@@ -694,14 +700,17 @@ void updateImageWeights(const uint32_t imageCount,
          {
             std::cout << std::endl;
          }
+*/
 #endif
          weight = weight * pow(beta, 1 - error);
          sumWeigth += weight;
       }
 
 #ifdef DEBUG
+/*
       std::cout << std::endl;
       std::cout << "Debug: Image Weights: " << std::endl;
+*/
 #endif
 
       // normalize
@@ -713,12 +722,14 @@ void updateImageWeights(const uint32_t imageCount,
             imageWeight = imageWeight / sumWeigth;
 
 #ifdef DEBUG
+/*
             std::cout << imageWeight;
 
             if (i + 1 < imageCount)
             {
                std::cout << ",";
             }
+*/
 #endif
          }
 
@@ -799,6 +810,7 @@ void adaBoost(const uint32_t roundIdx, const uint32_t countImages,
    std::cout << "Debug: Free memory: " << mem_free_0 << " Mem total: "
          << mem_tot_0 << std::endl;
 
+/*
    std::cout << "First classifiers:" << std::endl;
 
    for (uint32_t i = 0; i < pixelCount && i < 10; ++i)
@@ -832,6 +844,7 @@ void adaBoost(const uint32_t roundIdx, const uint32_t countImages,
    }
 
    std::cout << std::endl;
+*/
 #endif
 
    Classifier::SelectionResult selectedClassifier;

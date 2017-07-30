@@ -11,7 +11,9 @@
 #include "GpuStrongClassifier.cuh"
 #include "utilities.cuh"
 
-#include <opencv2/core/gpumat.hpp>
+//#include <opencv2/core/gpumat.hpp>
+#include <opencv2/cudev/ptr2d/gpumat.hpp>
+#include <opencv2/core/cuda_types.hpp>
 
 #include <iostream>
 
@@ -650,7 +652,7 @@ __device__ __forceinline__ void detectStrongClassifierAtPoint(
 
 
 __global__ void detectStrongClassifierGpu(
-      cv::gpu::PtrStepSz<int32_t> integralImage,
+      cv::cuda::PtrStepSz<int32_t> integralImage,
       const uint32_t imageWidth,
       const uint32_t imageHeight,
       const uint8_t * const allClassifierData,
@@ -753,7 +755,7 @@ __global__ void detectStrongClassifierOnImageSetGpu(
 bool Classifier::detectStrongClassifier(
       const std::vector<Classifier::Stage> & strongClassifier,
       FeatureTypes & featureTypes,
-      const cv::gpu::GpuMat & gpuIntegralImage,
+      const cv::cuda::GpuMat & gpuIntegralImage,
       std::vector<Classifier::ClassificationResult> & results
       )
 {

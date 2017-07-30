@@ -12,10 +12,15 @@
 #include <iostream>
 
 // load image includes
-#include <opencv2/contrib/contrib.hpp>
-#include <opencv2/core/core.hpp>
-#include <opencv2/core/gpumat.hpp>
-#include <opencv2/gpu/gpu.hpp>
+// #include <opencv2/contrib/contrib.hpp>
+//#include <opencv2/core/core.hpp>
+//#include <opencv2/core/gpumat.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/cudev/ptr2d/gpumat.hpp>
+#include <opencv2/core/cuda_types.hpp>
+#include <opencv2/imgcodecs.hpp>
+
 #include <opencv2/highgui/highgui.hpp>
 
 #include <cuda_profiler_api.h>
@@ -29,7 +34,7 @@ texture<uint8_t, 2> texOriginalImage;
 
 __global__ void getSingleIntegralImage(
 //      cv::gpu::PtrStepSz<uchar> originalImage,
-      cv::gpu::PtrStepSz<int32_t> integralImage,
+      cv::cuda::PtrStepSz<int32_t> integralImage,
       const uint32_t imageWidth,
       const uint32_t imageHeight,
       volatile uint32_t * blockSync
@@ -129,7 +134,7 @@ __global__ void getSingleIntegralImage(
    }
 }
 __global__ void getHistogram(
-      cv::gpu::PtrStepSz<uchar> originalImage,
+      cv::cuda::PtrStepSz<uchar> originalImage,
       const uint32_t imageWidth,
       const uint32_t imageHeight,
       uint32_t * histogram
@@ -161,7 +166,7 @@ __global__ void getHistogram(
 }
 
 __global__ void normalizeImageGpu(
-      cv::gpu::PtrStepSz<uchar> originalImage,
+      cv::cuda::PtrStepSz<uchar> originalImage,
       const uint32_t imageWidth,
       const uint32_t imageHeight,
       uint32_t * lookUpTable
@@ -230,7 +235,7 @@ bool Image::fromFile(const std::string & fileName, Image & image)
 
             // cv::Mat integralImage(image.mImageHeight, image.mImageWidth, CV_32S, integralImagePtr);
             cv::Mat integralImage(image.mImageHeight, image.mImageWidth, CV_32S);
-            // cv::gpu::GpuMat gpuIntegralImage(image.mImageHeight, image.mImageWidth, CV_32S, integralImagePtr);
+            // cv::cuda::GpuMat gpuIntegralImage(image.mImageHeight, image.mImageWidth, CV_32S, integralImagePtr);
             //integralImage.create(image.mImageHeight, image.mImageWidth, CV_32S, cv::Scalar::all(255));
             //integralImage.zeros(image.mImageHeight, image.mImageWidth, CV_32S);
             //integralImage.setTo(cv::Scalar::all(255));

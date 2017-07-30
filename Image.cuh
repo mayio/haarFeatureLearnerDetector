@@ -12,8 +12,10 @@
 #include <vector>
 #include <stdint.h>
 
-#include <opencv2/core/gpumat.hpp>
-#include <opencv2/gpu/gpu.hpp>
+//#include <opencv2/core/gpumat.hpp>
+//#include <opencv2/gpu/gpu.hpp>
+
+#include <opencv2/cudev/ptr2d/gpumat.hpp>
 
 #include "Classifier.cuh"
 
@@ -32,7 +34,7 @@ public:
    static bool fromFile(const std::string & fileName, Image & image);
    uint32_t getWidth() {return mImageWidth;}
    uint32_t getHeight() {return mImageHeight; }
-   cv::gpu::GpuMat & getGpuIntegralImage() {return mGpuIntegralImage;}
+   cv::cuda::GpuMat & getGpuIntegralImage() {return mGpuIntegralImage;}
 
    void displayClassificationResult(const std::vector<Classifier::ClassificationResult> & classificationResults);
 
@@ -49,12 +51,12 @@ private:
 
    cv::Mat mImage;
    cv::Mat mIntegralImage;
-   cv::gpu::GpuMat mGpuImage;
-   cv::gpu::GpuMat mGpuIntegralImage;
-   cv::gpu::PtrStepSz<uchar>   mImagePtr;
-   cv::gpu::PtrStepSz<int32_t> mIntegralImagePtr;
-   cv::gpu::PtrStepSz<uchar>   * mGpuImagesPtr;
-   cv::gpu::PtrStepSz<int32_t> * mGpuIntegralImagePtr;
+   cv::cuda::GpuMat mGpuImage;
+   cv::cuda::GpuMat mGpuIntegralImage;
+   cv::cuda::PtrStepSz<uchar>   mImagePtr;
+   cv::cuda::PtrStepSz<int32_t> mIntegralImagePtr;
+   cv::cuda::PtrStepSz<uchar>   * mGpuImagesPtr;
+   cv::cuda::PtrStepSz<int32_t> * mGpuIntegralImagePtr;
 };
 
 #endif /* IMAGE_CUH_ */

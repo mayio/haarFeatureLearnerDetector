@@ -307,7 +307,7 @@ void Image::displayImageFalseColor(const cv::Mat & img)
    cv::minMaxIdx(img, &min, &max);
    cv::Mat adjMap;
    // expand your range to 0..255. Similar to histEq();
-   img.convertTo(adjMap,CV_8UC1, 255 / (max-min), -min);
+   img.convertTo(adjMap,CV_8UC1, 255.0 / (max-min), -255.0 * min / (max-min));
 
    cv::Mat falseColorsMap;
    cv::applyColorMap(adjMap, falseColorsMap, cv::COLORMAP_RAINBOW);

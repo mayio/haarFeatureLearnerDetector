@@ -17,74 +17,6 @@
 
 #include <iostream>
 
-// texture
-texture<int32_t, 2, cudaReadModeElementType> texIntegralImage;
-
-__forceinline__ __device__ void Classifier::getFeatureValueTex(
-      const uint8_t * const classifier,
-      const uint32_t x,
-      uint32_t y,
-      const uint32_t rectElementWidth, const uint32_t rectElementHeight,
-      const uint32_t featureWidth, const uint32_t featureHeight,
-      int32_t & value)
-{
-   assert(false);
-
-   // FIXME:
-   // this is not right
-   // see getFeatureValue
-   // the rectElementWidth and rectElementHeight have to be reduced by 1
-   //
-
-   value = 0;
-   uint32_t xi = x;
-
-   uint32_t y2 = y + rectElementHeight;
-   uint32_t x2 = x + rectElementWidth;
-
-   int32_t i1 = tex2D(texIntegralImage, x,  y); //  integralImageLine[x];                     // integralImage(yi, xi);
-   int32_t i2 = tex2D(texIntegralImage, x2, y); //  integralImageLine[x + rectElementWidth];  // integralImage(yi, xi + rectElementWidth);
-   int32_t i3 = tex2D(texIntegralImage, x,  y2); // integralImageLine2[x];                    //integralImage(yi + rectElementHeight, xi);
-   int32_t i4 = tex2D(texIntegralImage, x2, y2); //integralImageLine2[x + rectElementWidth]; //integralImage(yi + rectElementHeight, xi + rectElementWidth);
-
-   int32_t k3 = i3;
-   int32_t k4 = i4;
-
-   for (uint32_t h = 0; h < featureHeight; ++h)
-   {
-      for (uint32_t w = 0; w < featureWidth; ++w)
-      {
-         int32_t rectangleType = 0;
-         Classifier::getRectangleType(classifier, h * featureWidth + w, rectangleType);
-         value += ((i4 + i1 - i2 - i3) * rectangleType);
-
-         if (w + 1 < featureWidth)
-         {
-            i1 = i2;
-            i3 = i4;
-
-            xi += rectElementWidth;
-            const uint32_t xi2 = xi + rectElementWidth;
-            i2 = tex2D(texIntegralImage, xi2, y); // integralImageLine[xi2];
-            i4 = tex2D(texIntegralImage, xi2, y2); // integralImageLine2[xi2];
-         }
-      }
-
-      if (h + 1 < featureHeight)
-      {
-         xi = x;
-         y = y2; // integralImageLine = integralImageLine2;
-         y2 += rectElementHeight; // integralImageLine2 = (int32_t*)((uint8_t*)(integralImageLine2) + rectElementHeight * lineStep);
-         i1 = k3;
-         i2 = k4;
-         i3 = tex2D(texIntegralImage, xi, y2); // integralImageLine2[xi];
-         i4 = tex2D(texIntegralImage, xi + rectElementWidth, y2); // integralImageLine2[xi + rectElementWidth];
-
-         k3 = i3;
-         k4 = i4;
-      }
-   }
-}
 
 std::string Classifier::dumpSelectedClassifier(
       const Classifier::SelectionResult & selected,
@@ -524,7 +456,8 @@ void Classifier::scaleStrongClassifier(
 }
 
 __device__ __forceinline__ void detectStrongClassifierAtPoint(
-      const int32_t * const integralImage,
+      const int32_t * const integralImagePtr,
+      cudaTextureObject_t texIntegralImage,
       const uint32_t imageWidth,
       const uint32_t imageHeight,
       const uint32_t step,
@@ -607,16 +540,30 @@ __device__ __forceinline__ void detectStrongClassifierAtPoint(
 
          if (!outOfRange)
          {
-            Classifier::getFeatureValue(
-                  integralImage,
-                  singleClassifier,
-                  // FIXME check this
-                  step,
-                  classifierLeftPoint,
-                  classifierUpperPoint,
-                  rectWidth, rectHeight,
-                  featureWidth, featureHeight,
-                  featureValue);
+            if (integralImagePtr)
+            {
+               Classifier::getFeatureValue(
+                     integralImagePtr,
+                     singleClassifier,
+                     // FIXME check this
+                     step,
+                     classifierLeftPoint,
+                     classifierUpperPoint,
+                     rectWidth, rectHeight,
+                     featureWidth, featureHeight,
+                     featureValue);
+            }
+            else
+            {
+               Classifier::getFeatureValueTex(
+                     texIntegralImage,
+                     singleClassifier,
+                     classifierLeftPoint,
+                     classifierUpperPoint,
+                     rectWidth, rectHeight,
+                     featureWidth, featureHeight,
+                     featureValue);
+            }
             const int32_t h = (classifierDescription.polarity * featureValue) < (classifierDescription.polarity * classifierDescription.threshold) ? 1 : 0;
             hSum += static_cast<double>(h) * alpha;
 // FIXME remove this
@@ -652,7 +599,9 @@ __device__ __forceinline__ void detectStrongClassifierAtPoint(
 
 
 __global__ void detectStrongClassifierGpu(
-      cv::cuda::PtrStepSz<int32_t> integralImage,
+      // const int32_t * const integralImageData, // replaced by texture
+      cudaTextureObject_t texIntegralImage,
+      const uint32_t step,
       const uint32_t imageWidth,
       const uint32_t imageHeight,
       const uint8_t * const allClassifierData,
@@ -682,15 +631,15 @@ if (x != 901 || y != 192 )
    return;
 */
 
-   const int32_t * integralImageData = (int32_t *)(integralImage.data);
    bool detected = false;
    double hSum = 0.0;
 
    detectStrongClassifierAtPoint(
-         integralImageData,
+         NULL, // integralImageData,
+         texIntegralImage,
          imageWidth,
          imageHeight,
-         integralImage.step / sizeof(uint32_t),
+         step,
          x, y,
          allClassifierData,
          stages,
@@ -738,6 +687,7 @@ __global__ void detectStrongClassifierOnImageSetGpu(
 
    detectStrongClassifierAtPoint(
          integralImageData,
+         0, // no texture
          imageWidth,
          imageHeight,
          imageWidth,
@@ -775,10 +725,39 @@ bool Classifier::detectStrongClassifier(
          );
 
    const GpuStrongClassifier gpuStrongClassifier(strongClassifier);
-   const uint32_t threadCount = 256;
+   const uint32_t threadCount = 64;
    const uint32_t blockCount = (pixelCount + threadCount - 1) / threadCount;
 
    uint8_t * gpuFeatureData = FeatureTypes::getConstantFeatureData();
+   int32_t * integralImageData = (int32_t *)(gpuIntegralImage.data);
+
+   // create a texture object for the integral image
+   // https://devblogs.nvidia.com/parallelforall/cuda-pro-tip-kepler-texture-objects-improve-performance-and-flexibility/
+   cudaResourceDesc resDescIntegralImage;
+   memset(&resDescIntegralImage, 0, sizeof(resDescIntegralImage));
+   resDescIntegralImage.resType = cudaResourceTypePitch2D;
+   resDescIntegralImage.res.pitch2D.devPtr = reinterpret_cast<void*>(integralImageData);
+   resDescIntegralImage.res.pitch2D.pitchInBytes =  gpuIntegralImage.step;
+   resDescIntegralImage.res.pitch2D.width = gpuIntegralImage.cols;
+   resDescIntegralImage.res.pitch2D.height = gpuIntegralImage.rows;
+   resDescIntegralImage.res.pitch2D.desc.f = cudaChannelFormatKindSigned;
+   resDescIntegralImage.res.pitch2D.desc.x = 32; // bits per channel
+   resDescIntegralImage.res.pitch2D.desc.y = 0;
+   /*
+   resDescIntegralImage.res.linear.devPtr = reinterpret_cast<void*>(integralImageData);
+   resDescIntegralImage.res.linear.desc.f = cudaChannelFormatKindSigned;
+   resDescIntegralImage.res.linear.desc.x = 32; // bits per channel
+   resDescIntegralImage.res.linear.sizeInBytes = sizeof(int32_t) * gpuIntegralImage.step * gpuIntegralImage.rows;
+   */
+
+   cudaTextureDesc texDescIntegralImage;
+   memset(&texDescIntegralImage, 0, sizeof(texDescIntegralImage));
+   texDescIntegralImage.readMode = cudaReadModeElementType;
+
+   // create texture object: we only have to do this once!
+   cudaTextureObject_t texIntegralImage=0;
+   cudaCreateTextureObject(&texIntegralImage, &resDescIntegralImage, &texDescIntegralImage, NULL);
+
 
    cudaEvent_t start;
    cudaEvent_t stop;
@@ -788,7 +767,9 @@ bool Classifier::detectStrongClassifier(
    cudaEventRecord(start);
 
    detectStrongClassifierGpu<<<blockCount, threadCount>>>(
-         gpuIntegralImage,
+         // integralImageData, // replaced by texture
+         texIntegralImage,
+         gpuIntegralImage.step / sizeof(uint32_t),
          gpuIntegralImage.cols,
          gpuIntegralImage.rows,
          gpuFeatureData,
@@ -829,6 +810,9 @@ bool Classifier::detectStrongClassifier(
       }
    }
    ////////////////
+
+   // destroy texture object
+   cudaDestroyTextureObject(texIntegralImage);
 
    CUDA_CHECK_RETURN(cudaFree(resultsPtr));
    return detected;

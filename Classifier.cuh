@@ -222,13 +222,66 @@ public:
    }
 
    __forceinline__ __device__ static void getFeatureValueTex(
+         const cudaTextureObject_t & texIntegralImage,
          const uint8_t * const classifier,
-         // texture<int32_t, 2> & texIntegralImage,
          const uint32_t x,
          uint32_t y,
          const uint32_t rectElementWidth, const uint32_t rectElementHeight,
          const uint32_t featureWidth, const uint32_t featureHeight,
-         int32_t & value);
+         int32_t & value)
+   {
+      value = 0;
+      uint32_t xi = x;
+
+      const uint32_t rectElementWidthErode = rectElementWidth - 1;
+      const uint32_t rectElementHeightErode = rectElementHeight -1;
+
+      uint32_t y2 = y + rectElementHeightErode;
+      uint32_t x2 = x + rectElementWidthErode;
+
+      int32_t i1 = tex2D<int32_t>(texIntegralImage, x,  y); //  integralImageLine[x];                     // integralImage(yi, xi);
+      int32_t i2 = tex2D<int32_t>(texIntegralImage, x2, y); //  integralImageLine[x + rectElementWidth];  // integralImage(yi, xi + rectElementWidth);
+      int32_t i3 = tex2D<int32_t>(texIntegralImage, x,  y2); // integralImageLine2[x];                    //integralImage(yi + rectElementHeight, xi);
+      int32_t i4 = tex2D<int32_t>(texIntegralImage, x2, y2); //integralImageLine2[x + rectElementWidth]; //integralImage(yi + rectElementHeight, xi + rectElementWidth);
+
+      int32_t k3 = i3;
+      int32_t k4 = i4;
+
+      for (uint32_t h = 0; h < featureHeight; ++h)
+      {
+         for (uint32_t w = 0; w < featureWidth; ++w)
+         {
+            int32_t rectangleType = 0;
+            Classifier::getRectangleType(classifier, h * featureWidth + w, rectangleType);
+            value += ((i4 + i1 - i2 - i3) * rectangleType);
+
+            if (w + 1 < featureWidth)
+            {
+               i1 = i2;
+               i3 = i4;
+
+               xi += rectElementWidthErode;
+               const uint32_t xi2 = xi + rectElementWidthErode;
+               i2 = tex2D<int32_t>(texIntegralImage, xi2, y); // integralImageLine[xi2];
+               i4 = tex2D<int32_t>(texIntegralImage, xi2, y2); // integralImageLine2[xi2];
+            }
+         }
+
+         if (h + 1 < featureHeight)
+         {
+            xi = x;
+            y = y2; // integralImageLine = integralImageLine2;
+            y2 += rectElementHeightErode; // integralImageLine2 = (int32_t*)((uint8_t*)(integralImageLine2) + rectElementHeight * lineStep);
+            i1 = k3;
+            i2 = k4;
+            i3 = tex2D<int32_t>(texIntegralImage, xi, y2); // integralImageLine2[xi];
+            i4 = tex2D<int32_t>(texIntegralImage, xi + rectElementWidthErode, y2); // integralImageLine2[xi + rectElementWidth];
+
+            k3 = i3;
+            k4 = i4;
+         }
+      }
+   }
 
    static void sizeStrongClassifier(
          const std::vector<Classifier::Stage> & strongClassifier,

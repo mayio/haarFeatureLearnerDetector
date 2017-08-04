@@ -212,7 +212,7 @@ bool loadImages(int32_t * integralImagesGpuMem,
    // fill up with unprocessed images
    for (;
          falseImageStartIdx < imageFileNames.size()
-					      && loadImageIdx < maxImages
+					      && loadImageIdx < maxImages;
 					      )
    {
       const std::string & fileName = imageFileNames[falseImageStartIdx];
@@ -715,9 +715,15 @@ int main(void) {
                   << falsePositivesCount << std::endl;
 #endif
             // try to load more images if there are too less false positive images are available
-            loadImages(integralImagesGpuMem, imagesToLoad, curCountImages,
-                  fileNames, falsePositiveImages, countPosImages,
-                  imageWidth, imageHeight, false, falseImageStartIdx,
+            loadImages(
+                  integralImagesGpuMem,
+                  imagesToLoad,
+                  curCountImages,
+                  fileNames,
+                  falsePositiveImages,
+                  countPosImages,
+                  imageWidth, imageHeight,
+                  falseImageStartIdx,
                   availableIntegralImages, loadedImageIdx,
                   availableIntegralImagesGpu, loadedImagesCount);
 

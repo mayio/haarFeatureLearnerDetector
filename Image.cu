@@ -158,11 +158,11 @@ __global__ void getHistogram(
          originalImageData += originalImage.step;
          y++;
       }
+
+      __syncthreads();
+
+      atomicAdd(&(histogram[threadIdx.x]), tempHistogram[threadIdx.x]);
    }
-
-   __syncthreads();
-
-   atomicAdd(&(histogram[threadIdx.x]), tempHistogram[threadIdx.x]);
 }
 
 __global__ void normalizeImageGpu(
@@ -173,6 +173,11 @@ __global__ void normalizeImageGpu(
       )
 {
    const uint32_t i =  blockIdx.x * blockDim.x + threadIdx.x;
+
+   if (i >= imageWidth * imageHeight)
+   {
+      return;
+   }
 
    const uint32_t y = i / imageWidth;
    const uint32_t x = i - y * imageWidth;
@@ -185,6 +190,7 @@ __global__ void normalizeImageGpu(
 
 bool Image::fromFile(const std::string & fileName, Image & image)
 {
+   dumpFreeMemory("Image::fromFile start:");
    cudaEvent_t start;
    cudaEvent_t stop;
    cudaEventCreate(&start);
@@ -203,10 +209,11 @@ bool Image::fromFile(const std::string & fileName, Image & image)
          //cudaEventRecord(stop);
          //cudaEventSynchronize(stop);
 
-         //dumpElapsedTime("fromFile: normalize image", start, stop);
+         //dumpElapsedTime("Image::fromFile: normalize image", start, stop);
          //image.mImage.convertTo(image.mImage, CV_8U);
 
          image.mGpuImage.upload(image.mImage);
+         dumpFreeMemory("Image::fromFile image uploaded:");
 
          image.mImageWidth = image.mImage.cols;
          image.mImageHeight = image.mImage.rows;
@@ -214,11 +221,11 @@ bool Image::fromFile(const std::string & fileName, Image & image)
           //image.mImageHeight = 10;
          //threadCount = image.mImageHeight;
 
-         std::cout << "fromFile: ImageDimension: width:" << image.mImageWidth << " height:" << image.mImageHeight << std::endl;
+         std::cout << "Image::fromFile: ImageDimension: width:" << image.mImageWidth << " height:" << image.mImageHeight << std::endl;
 
          if (image.mImageWidth > 0 && image.mImageHeight > 0)
          {
-            image.mGpuIntegralImage.create(image.mImageHeight, image.mImageWidth, CV_32S);
+            image.mGpuIntegralImage = cv::cuda::GpuMat(image.mImageHeight, image.mImageWidth, CV_32S);
             image.normalizeImage();
             image.calcIntegralImage(threadCount);
 
@@ -253,12 +260,17 @@ bool Image::fromFile(const std::string & fileName, Image & image)
 /*
    }
 */
+
+   cudaEventDestroy(start);
+   cudaEventDestroy(stop);
    return success;
 }
 
 
 void Image::calcIntegralImage(const uint32_t threadCount)
 {
+   dumpFreeMemory("calcIntegralImage start:");
+
    cudaEvent_t start;
    cudaEvent_t stop;
    cudaEventCreate(&start);
@@ -295,10 +307,12 @@ void Image::calcIntegralImage(const uint32_t threadCount)
    dumpElapsedTime("calcIntegralImage", start, stop);
 
    CUDA_CHECK_RETURN(cudaUnbindTexture(texOriginalImage));
-   dumpFreeMemory("calcIntegralImage finished:");
-
    CUDA_CHECK_RETURN(cudaFree(sharedMemProgress));
    CUDA_CHECK_RETURN(cudaFree(blockSync));
+   cudaEventDestroy(start);
+   cudaEventDestroy(stop);
+
+   dumpFreeMemory("calcIntegralImage finished:");
 }
 void Image::displayImageFalseColor(const cv::Mat & img)
 {
@@ -326,6 +340,8 @@ void Image::displayImage(const cv::Mat & img)
 
 void Image::normalizeImage()
 {
+   dumpFreeMemory("normalizeImage start:");
+
    cudaEvent_t start;
    cudaEvent_t stop;
    cudaEventCreate(&start);
@@ -379,11 +395,14 @@ void Image::normalizeImage()
    cudaEventRecord(stop);
    cudaEventSynchronize(stop);
 
-   dumpElapsedTime("normalizeImage apply LUT", start, stop);
-   dumpFreeMemory("normalizeImage finished:");
-
    CUDA_CHECK_RETURN(cudaFree(gpuHistogram));
    delete[] histogram;
+
+   dumpElapsedTime("normalizeImage apply LUT", start, stop);
+
+   cudaEventDestroy(start);
+   cudaEventDestroy(stop);
+   dumpFreeMemory("normalizeImage finished:");
 }
 
 void Image::displayClassificationResult(const std::vector<Classifier::ClassificationResult> & classificationResults)
@@ -429,4 +448,60 @@ void Image::displayClassificationResult(const std::vector<Classifier::Classifica
 
 
    Image::displayImage(resultImage);
+}
+
+void Image::storeClassificationResult(
+      const std::string & testImageBaseName,
+      const std::vector<Classifier::ClassificationResult> & classificationResults,
+      const std::string & classificationResultFolder,
+      const uint32_t resultImageWidth,
+      const uint32_t resultImageHeight)
+{
+   dumpFreeMemory("storeClassificationResult: storeClassificationResult start");
+
+   cv::Mat normalizedImage;
+   mGpuImage.download(normalizedImage);
+
+   for (std::vector<Classifier::ClassificationResult>::const_iterator resultIter = classificationResults.begin();
+        resultIter != classificationResults.end();
+        ++resultIter)
+   {
+      cv::Rect cropArea;
+      cropArea.x = (*resultIter).x;
+      cropArea.y = (*resultIter).y;
+      cropArea.width = (*resultIter).width;
+      cropArea.height = (*resultIter).height;
+
+      cv::Mat cropImg = normalizedImage(cropArea);
+
+      char filename[4096];
+      snprintf(filename, 4096, "%s/classified_neg_%s_%04d_%04d_%04d.png",
+            classificationResultFolder.c_str(),
+            testImageBaseName.c_str(),
+            cropArea.width,
+            cropArea.x,cropArea.y);
+
+      cv::Mat resizedImg;
+      cv::Size resizeArea;
+      resizeArea.height = resultImageHeight;
+      resizeArea.width = resultImageWidth;
+
+      cv::resize(cropImg, resizedImg, resizeArea, cv::INTER_AREA);
+
+      std::vector<int> compression_params;
+      compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+      compression_params.push_back(9);
+
+      cv::imwrite(std::string(filename), resizedImg, compression_params);
+
+      resizedImg.release();
+      cropImg.release();
+
+      assert(!resizedImg.data);
+      assert(!cropImg.data);
+   }
+   normalizedImage.release();
+   assert(!normalizedImage.data);
+
+   dumpFreeMemory("storeClassificationResult: storeClassificationResult done");
 }

@@ -31,12 +31,38 @@ public:
       uint32_t y;
    };
 */
+   ~Image()
+   {
+      release();
+   }
+
+   void release()
+   {
+      mImage.release();
+      mIntegralImage.release();
+
+      mGpuImage.release();
+      mGpuIntegralImage.release();
+
+      assert(!mImage.data);
+      assert(!mIntegralImage.data);
+      assert(!mGpuImage.data);
+      assert(!mGpuIntegralImage.data);
+   }
+
    static bool fromFile(const std::string & fileName, Image & image);
    uint32_t getWidth() {return mImageWidth;}
    uint32_t getHeight() {return mImageHeight; }
    cv::cuda::GpuMat & getGpuIntegralImage() {return mGpuIntegralImage;}
 
    void displayClassificationResult(const std::vector<Classifier::ClassificationResult> & classificationResults);
+
+   void storeClassificationResult(
+         const std::string & testImageBaseName,
+         const std::vector<Classifier::ClassificationResult> & classificationResults,
+         const std::string & classificationResultFolder,
+         const uint32_t resultImageWidth,
+         const uint32_t resultImageHeight);
 
    static void displayImageFalseColor(const cv::Mat & img);
    static void displayImage(const cv::Mat & img);
@@ -55,8 +81,6 @@ private:
    cv::cuda::GpuMat mGpuIntegralImage;
    cv::cuda::PtrStepSz<uchar>   mImagePtr;
    cv::cuda::PtrStepSz<int32_t> mIntegralImagePtr;
-   cv::cuda::PtrStepSz<uchar>   * mGpuImagesPtr;
-   cv::cuda::PtrStepSz<int32_t> * mGpuIntegralImagePtr;
 };
 
 #endif /* IMAGE_CUH_ */

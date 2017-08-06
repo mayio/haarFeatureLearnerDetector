@@ -33,6 +33,7 @@ FeatureTypes::~FeatureTypes()
 void FeatureTypes::generateClassifier(const double scale, const uint32_t windowWidth,
          const uint32_t windowHeight, bool calcOnlySize, uint32_t & memsize)
 {
+   memsize = 0;
    assert(data || calcOnlySize);
 
    std::vector<uint32_t> featureTypeOffsets;
@@ -217,6 +218,8 @@ void FeatureTypes::generateClassifier(const double scale, const uint32_t windowW
       CUDA_CHECK_RETURN(cudaFree(gpuData));
       gpuData = NULL;
    }
+
+   dataSize = 0;
 
    // calc first size
    uint32_t maxSize = 0;

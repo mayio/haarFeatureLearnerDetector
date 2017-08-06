@@ -386,8 +386,11 @@ void Classifier::sizeStrongClassifier(
 
    xMax = 0;
    yMax = 0;
-   xMin = INT32_MAX;
-   yMin = INT32_MAX;
+
+   // xMin = INT32_MAX;
+   // yMin = INT32_MAX;
+   xMin = 0;
+   xMax = 0;
 
    for (std::vector<Classifier::Stage>::const_iterator stageIter = strongClassifier.begin();
         stageIter != strongClassifier.end();
@@ -725,7 +728,7 @@ bool Classifier::detectStrongClassifier(
          );
 
    const GpuStrongClassifier gpuStrongClassifier(strongClassifier);
-   const uint32_t threadCount = 64;
+   const uint32_t threadCount = 32;
    const uint32_t blockCount = (pixelCount + threadCount - 1) / threadCount;
 
    uint8_t * gpuFeatureData = FeatureTypes::getConstantFeatureData();
@@ -815,6 +818,7 @@ bool Classifier::detectStrongClassifier(
    cudaDestroyTextureObject(texIntegralImage);
 
    CUDA_CHECK_RETURN(cudaFree(resultsPtr));
+   delete[] hostResult;
    return detected;
 }
 

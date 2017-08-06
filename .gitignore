@@ -4,3 +4,5 @@ DebugLearner
 Release
 ReleaseLearner
 /ReleaseDetector/
+/ReleaseDetectorHost/
+/DebugDetectorHost/

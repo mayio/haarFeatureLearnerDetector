@@ -335,14 +335,14 @@ int main(void) {
    outputfile.open(outputFileName.c_str());
 
    // settings
-   const uint32_t ratioX = 2;
-   const uint32_t ratioY = 2;
+   const uint32_t ratioX = 1;
+   const uint32_t ratioY = 1;
    const double classifierScale = 1.25;
    // FIMXE: set this to 40000
    const uint32_t maxLoadedImages = 100000;
 
    const uint32_t stages = 20;
-   const double f = 0.3;  // false positive rate per layer
+   const double f = 0.4;  // false positive rate per layer
    const double d = 0.99; // minimum acceptable detection rate per layer
    const double fTarget = pow(f, stages); // overall false positive rate
 
@@ -739,10 +739,12 @@ int main(void) {
       std::cout << "False Positive images detected (in current stage):"
             << availableIntegralImages.size() - countPosImages << std::endl;
 
-      if (availableIntegralImages.size() <= (countPosImages * 1.1))
+      if (availableIntegralImages.size() <= (countPosImages + fTarget * (maxAvailableImages - countPosImages)))
       {
 #ifdef DEBUG
-         std::cout << "Debug: No false positive images are left. Finishing!"
+         std::cout << "Debug: False positive target reached. "
+               << availableIntegralImages.size() - countPosImages
+               << " False Positive Images left. Finishing!"
                << std::endl;
 #endif
          break;

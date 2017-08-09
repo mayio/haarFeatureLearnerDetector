@@ -368,8 +368,14 @@ int main(void) {
    // cars on PC
    const cv::String pathPositiveImages =
          "/media/mona/ObjectRecognitio/data/objectRecognition/cars/TheKITTIVision/data/training/image_back_inline/*.png";
+
+   // negative images no cars on PC
    const cv::String pathNegativeImages =
          "/media/mona/ObjectRecognitio/data/objectRecognition/cars/TheKITTIVision/data/training/negative_2/*.png";
+
+   // negative images no cars on PC hand classified
+   const cv::String pathNegativeImages01 =
+         "/media/mona/ObjectRecognitio/data/objectRecognition/cars/TheKITTIVision/data/training/negativeImage01/*.png";
 
    size_t mem_tot_0 = 0;
    size_t mem_free_0 = 0;
@@ -392,11 +398,13 @@ int main(void) {
    // load images
    std::vector<cv::String> fileNamesPos;
    std::vector<cv::String> fileNamesNeg;
+   std::vector<cv::String> fileNamesNeg01;
    std::vector<std::string> fileNames;
 
    // load positive and negative images
    cv::glob(pathPositiveImages, fileNamesPos, true);
    cv::glob(pathNegativeImages, fileNamesNeg, true);
+   cv::glob(pathNegativeImages01, fileNamesNeg01, true);
    //FIXME: remove this
    //fileNamesPos.resize(500);
 
@@ -409,6 +417,7 @@ int main(void) {
    // insert all filenames into a common list
    fileNames.insert(fileNames.end(), fileNamesPos.begin(), fileNamesPos.end());
    fileNames.insert(fileNames.end(), fileNamesNeg.begin(), fileNamesNeg.end());
+   fileNames.insert(fileNames.end(), fileNamesNeg01.begin(), fileNamesNeg01.end());
 
    cv::Mat firstImage = cv::imread(*fileNames.begin(),
          CV_LOAD_IMAGE_GRAYSCALE);

@@ -347,7 +347,7 @@ int main(void) {
    const double fTarget = pow(f, stages); // overall false positive rate
 
    const uint32_t factorFirstStageImages = 4; // factor with positive images to learn the first stage
-   const uint32_t factorImagesPerStage = 2; // factor with positive images to learn the following stages
+   const uint32_t factorImagesPerStage = 3; // factor with positive images to learn the following stages
 
    // faces
    // const std::string pathPositiveImages = "/mnt/project-disk/src/ObjectRecognition/data/facesTraining/att_faces/*.pgm";
@@ -398,13 +398,16 @@ int main(void) {
    // load images
    std::vector<cv::String> fileNamesPos;
    std::vector<cv::String> fileNamesNeg;
-   std::vector<cv::String> fileNamesNeg01;
+   std::vector<cv::String> fileNamesNegAdditional;
    std::vector<std::string> fileNames;
 
    // load positive and negative images
    cv::glob(pathPositiveImages, fileNamesPos, true);
    cv::glob(pathNegativeImages, fileNamesNeg, true);
-   cv::glob(pathNegativeImages01, fileNamesNeg01, true);
+
+   cv::glob(pathNegativeImages01, fileNamesNegAdditional, true);
+   fileNamesNeg.insert(fileNamesNeg.end(), fileNamesNegAdditional.begin(), fileNamesNegAdditional.end());
+
    //FIXME: remove this
    //fileNamesPos.resize(500);
 
@@ -412,12 +415,14 @@ int main(void) {
    assert(fileNamesNeg.size() > 0);
 
    // sort negative images
-   std::sort(fileNamesNeg.begin(), fileNamesNeg.end());
+   // std::sort(fileNamesNeg.begin(), fileNamesNeg.end());
+
+   // shuffle negative images
+   std::random_shuffle(fileNamesNeg.begin(), fileNamesNeg.end());
 
    // insert all filenames into a common list
    fileNames.insert(fileNames.end(), fileNamesPos.begin(), fileNamesPos.end());
    fileNames.insert(fileNames.end(), fileNamesNeg.begin(), fileNamesNeg.end());
-   fileNames.insert(fileNames.end(), fileNamesNeg01.begin(), fileNamesNeg01.end());
 
    cv::Mat firstImage = cv::imread(*fileNames.begin(),
          CV_LOAD_IMAGE_GRAYSCALE);

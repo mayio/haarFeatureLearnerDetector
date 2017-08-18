@@ -12,7 +12,7 @@
 #include <assert.h>
 #include "utilities.cuh"
 
-#define FEATURE_DATA_MAX_SIZE 15 * 1024
+#define FEATURE_DATA_MAX_SIZE 31 * 1024
 __constant__ uint8_t g_FeatureData[FEATURE_DATA_MAX_SIZE];
 
 FeatureTypes::~FeatureTypes()
